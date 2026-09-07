@@ -1943,8 +1943,7 @@ function StudentModalWrapper({ lead, pendingStatus, onClose, onSettled }: {
       open
       lead={lead}
       existingStudent={existingStudent}
-      onClose={onClose}
-      onSkip={onSettled}
+      onClose={onSettled}
       onCreated={onSettled}
     />
   );

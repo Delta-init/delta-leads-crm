@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap, X, User2, Phone, Mail, BookOpen,
-  Calendar, DollarSign, StickyNote, CheckCircle2, SkipForward,
+  Calendar, DollarSign, StickyNote, CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { fmtFull } from "@/lib/currency";
 import { useCreateStudent, useUpdateStudent } from "@/hooks/useStudents";
 import { useAllCourses } from "@/hooks/useCourses";
+import { useAddPayment } from "@/hooks/usePayments";
 import type { Lead } from "@/types/lead";
 import type { Course } from "@/types/course";
 import type { FeeStatus, Student } from "@/types/student";
@@ -31,12 +32,12 @@ interface Props {
    * second close looked like nothing happened at all.
    */
   existingStudent?: Student | null;
+  /** Dismissing still closes the lead: the status was already chosen. */
   onClose: () => void;
-  onSkip: () => void;
   onCreated: () => void;
 }
 
-export function CreateStudentModal({ open, lead, existingStudent, onClose, onSkip, onCreated }: Props) {
+export function CreateStudentModal({ open, lead, existingStudent, onClose, onCreated }: Props) {
   const editing = Boolean(existingStudent);
 
   /** The course the lead already carries, if it was picked during the sale. */
@@ -54,9 +55,26 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onSki
   const [courseId, setCourseId] = useState(knownCourse?._id ?? "");
   const pickedCourse = knownCourse ?? courses.find((c) => c._id === courseId) ?? null;
 
-  const totalFee  = existingStudent?.totalFee ?? pickedCourse?.amount ?? 0;
-  const paidAmount = existingStudent?.paidAmount ?? (lead.payments ?? []).reduce((s, p) => s + p.amount, 0);
-  const pending   = Math.max(0, totalFee - paidAmount);
+  /*
+   * The fee follows the course, and can be argued with.
+   *
+   * Seeded from what the enrolment already stores, or the course's price when
+   * it stores nothing — an enrolment created before a course was picked has a
+   * fee of zero, and showing that beside a course priced at 5,200 makes every
+   * figure under it wrong. Editable because the price on the brochure is not
+   * always the price that was agreed.
+   */
+  const [feeInput, setFeeInput] = useState(
+    String(existingStudent?.totalFee || knownCourse?.amount || ""),
+  );
+  const totalFee = Number(feeInput) || 0;
+
+  /** What was collected before today, from the payments already on the lead. */
+  const alreadyPaid = (lead.payments ?? []).reduce((s, p) => s + p.amount, 0);
+  const [paidNowInput, setPaidNowInput] = useState("");
+  const paidNow = Math.max(0, Number(paidNowInput) || 0);
+  const paidAmount = alreadyPaid + paidNow;
+  const pending = Math.max(0, totalFee - paidAmount);
 
   const computedFeeStatus: FeeStatus =
     totalFee <= 0 || paidAmount <= 0 ? "pending"
@@ -68,10 +86,14 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onSki
     (existingStudent?.enrollmentDate ?? new Date().toISOString()).slice(0, 10),
   );
   const [feeStatus, setFeeStatus] = useState<FeeStatus>(existingStudent?.feeStatus ?? computedFeeStatus);
+  const [feeStatusTouched, setFeeStatusTouched] = useState(false);
+  // Follows the numbers until somebody sets it by hand, then stays put.
+  const effectiveFeeStatus = feeStatusTouched ? feeStatus : computedFeeStatus;
 
   const createMut = useCreateStudent();
   const updateMut = useUpdateStudent();
-  const saving = createMut.isPending || updateMut.isPending;
+  const addPayment = useAddPayment(lead._id);
+  const saving = createMut.isPending || updateMut.isPending || addPayment.isPending;
 
   // An enrolment with no course bills nothing. Where the lead never named one
   // it has to be chosen here, rather than quietly producing a zero invoice.
@@ -86,6 +108,26 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onSki
   }
 
   async function handleCreate() {
+    /*
+     * The money is recorded on the lead, not just on the enrolment.
+     *
+     * The lead's payment list is where the CRM already counts what a client
+     * has handed over, and it is what the fee summary above reads. Writing the
+     * figure only onto the student would leave two records of the same money
+     * that drift apart the moment anybody adds a payment the ordinary way.
+     *
+     * Done before the enrolment is saved: a payment that failed to record is
+     * worth stopping for, whereas one recorded against an enrolment that then
+     * failed can be finished by hand.
+     */
+    if (paidNow > 0) {
+      await addPayment.mutateAsync({
+        amount: paidNow,
+        note: `Collected at enrolment${pickedCourse ? ` — ${pickedCourse.name}` : ""}`,
+        paidAt: new Date(enrollmentDate).toISOString(),
+      });
+    }
+
     if (editing && existingStudent) {
       // The enrolment exists; this is the second visit to it. Only the fields
       // this dialog actually owns are sent, so nothing recorded elsewhere is
@@ -95,8 +137,9 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onSki
         data: {
           course: pickedCourse?._id ?? null,
           enrollmentDate: new Date(enrollmentDate).toISOString(),
-          feeStatus,
+          feeStatus: effectiveFeeStatus,
           totalFee,
+          paidAmount,
           notes: notes || undefined,
         },
       });
@@ -124,7 +167,7 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onSki
       firstContactTime: lead.firstContactTime  ?? null,
       lastFollowupDate: lead.lastFollowupDate  ?? null,
       enrollmentDate: new Date(enrollmentDate).toISOString(),
-      feeStatus,
+      feeStatus: effectiveFeeStatus,
       totalFee,
       paidAmount,
       notes: notes || undefined,
@@ -239,6 +282,34 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onSki
                       <p className="text-[10px] text-muted-foreground">Pending</p>
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <p className="text-[11px] text-muted-foreground">Total fee</p>
+                      <Input
+                        type="number" min="0" step="0.01" value={feeInput}
+                        onChange={(e) => setFeeInput(e.target.value)}
+                        placeholder="0" className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[11px] text-muted-foreground">
+                        Collected now{alreadyPaid > 0 ? ` · ${fmtFull(alreadyPaid)} already` : ""}
+                      </p>
+                      <Input
+                        type="number" min="0" step="0.01" value={paidNowInput}
+                        onChange={(e) => setPaidNowInput(e.target.value)}
+                        placeholder="0" className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                  {/* What is typed here becomes a payment on the lead, so the
+                      money is recorded in one place rather than two that can
+                      disagree. */}
+                  {paidNow > 0 && (
+                    <p className="text-[10px] text-muted-foreground">
+                      {fmtFull(paidNow)} will be added to this lead&apos;s payments.
+                    </p>
+                  )}
                   {totalFee > 0 && (
                     <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                       <motion.div
@@ -264,7 +335,17 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onSki
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <BookOpen className="h-3 w-3" /> Course
                     </p>
-                    <Select value={courseId} onValueChange={setCourseId} disabled={coursesLoading}>
+                    <Select
+                      value={courseId}
+                      onValueChange={(v) => {
+                        setCourseId(v);
+                        // The fee follows the course that was just chosen,
+                        // rather than leaving the old number under a new name.
+                        const c = courses.find((x) => x._id === v);
+                        if (c?.amount) setFeeInput(String(c.amount));
+                      }}
+                      disabled={coursesLoading}
+                    >
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder={coursesLoading ? "Loading courses…" : "Select a course"} />
                       </SelectTrigger>
@@ -300,7 +381,7 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onSki
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <DollarSign className="h-3 w-3" /> Fee Status
                     </p>
-                    <Select value={feeStatus} onValueChange={(v) => setFeeStatus(v as FeeStatus)}>
+                    <Select value={effectiveFeeStatus} onValueChange={(v) => { setFeeStatus(v as FeeStatus); setFeeStatusTouched(true); }}>
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
@@ -335,9 +416,9 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onSki
               transition={{ delay: 0.2 }}
               className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border/50 bg-card px-5 py-3"
             >
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={onSkip} disabled={saving}>
-                <SkipForward className="h-4 w-4" /> Skip for now
-              </Button>
+              <span className="text-[11px] text-muted-foreground">
+                {editing ? "Changes apply to this enrolment." : "The lead is closed either way."}
+              </span>
               <Button
                 size="sm"
                 className="gap-2"

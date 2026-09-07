@@ -1417,7 +1417,6 @@ export default function LeadDetailPage() {
           lead={lead}
           existingStudent={existingStudent}
           onClose={() => setShowStudentModal(false)}
-          onSkip={() => setShowStudentModal(false)}
           onCreated={() => setShowStudentModal(false)}
         />
       )}
