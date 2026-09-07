@@ -1,4 +1,6 @@
 export interface Course {
+  /** The Delta Finance catalogue item this course is, once mapped. */
+  financeItemId?: string | null;
   _id: string;
   name: string;
   description?: string;

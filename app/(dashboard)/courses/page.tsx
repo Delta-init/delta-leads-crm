@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen, Plus, Search, X, Edit2, Trash2,
   DollarSign, ChevronLeft, ChevronRight, BookMarked,
-  TrendingUp, Package, Loader2,
+  TrendingUp, Package, Loader2, Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MapToFinanceDialog } from "@/components/courses/MapToFinanceDialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -50,13 +51,14 @@ function CourseCardSkeleton() {
 // ─── Course Card ──────────────────────────────────────────────────────────────
 
 interface CourseCardProps {
+  onMap: (c: Course) => void;
   course: Course;
   onEdit: (c: Course) => void;
   onDelete: (c: Course) => void;
   index: number;
 }
 
-function CourseCard({ course, onEdit, onDelete, index }: CourseCardProps) {
+function CourseCard({ course, onEdit, onDelete, onMap, index }: CourseCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -99,6 +101,22 @@ function CourseCard({ course, onEdit, onDelete, index }: CourseCardProps) {
             {formatAmount(course.amount)}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">Course fee</p>
+
+          {/* Whether an enrolment for this course lands on a real catalogue
+              item in finance or on a typed line. Shown rather than hidden in a
+              dialog: an unmapped course is the thing worth noticing. */}
+          <button
+            type="button"
+            onClick={() => onMap(course)}
+            className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+              course.financeItemId
+                ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Link2 className="h-3 w-3" />
+            {course.financeItemId ? "Mapped to finance" : "Not mapped to finance"}
+          </button>
         </CardContent>
 
         <CardFooter className="pt-3 border-t border-border/50 flex items-center justify-between gap-2">
@@ -120,6 +138,15 @@ function CourseCard({ course, onEdit, onDelete, index }: CourseCardProps) {
               onClick={() => onEdit(course)}
             >
               <Edit2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground hover:text-primary"
+              title="Map to a finance catalogue item"
+              onClick={() => onMap(course)}
+            >
+              <Link2 className="h-3.5 w-3.5" />
             </Button>
             <Button
               size="icon"
@@ -151,6 +178,7 @@ function CoursesPageContent() {
   const [editCourse, setEditCourse]           = useState<Course | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteCourse, setDeleteCourse]       = useState<Course | null>(null);
+  const [mappingCourse, setMappingCourse]     = useState<Course | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
@@ -346,6 +374,7 @@ function CoursesPageContent() {
                   course={course}
                   onEdit={openEdit}
                   onDelete={openDelete}
+                  onMap={setMappingCourse}
                   index={i}
                 />
               ))}
@@ -411,6 +440,12 @@ function CoursesPageContent() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         course={deleteCourse}
+      />
+
+      <MapToFinanceDialog
+        course={mappingCourse}
+        open={Boolean(mappingCourse)}
+        onClose={() => setMappingCourse(null)}
       />
     </>
   );
