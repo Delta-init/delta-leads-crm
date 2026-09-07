@@ -1935,16 +1935,14 @@ function StudentModalWrapper({ lead, pendingStatus, onClose, onSettled }: {
 
   if (isLoading) return null;
 
-  // Already a student — just close status update silently
-  if (existingStudent) {
-    onSettled();
-    return null;
-  }
-
+  // An enrolment that already exists is shown, not skipped. Closing a lead a
+  // second time — after it went to follow-up and came back — used to update the
+  // status silently and show nothing, so the close looked like it had failed.
   return (
     <CreateStudentModal
       open
       lead={lead}
+      existingStudent={existingStudent}
       onClose={onClose}
       onSkip={onSettled}
       onCreated={onSettled}

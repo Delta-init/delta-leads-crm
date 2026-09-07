@@ -924,7 +924,12 @@ export default function LeadDetailPage() {
                             setLostModalOpen(true);
                           } else if (newStatus === "followup") {
                             setFollowupModalOpen(true);
-                          } else if (newStatus === "closed" && !existingStudent) {
+                          } else if (newStatus === "closed") {
+                            // Shown whether or not this lead is already
+                            // enrolled. Closing one a second time used to fall
+                            // through to a bare status update, so the dialog
+                            // never appeared and the close looked like it had
+                            // done nothing.
                             updateStatus.mutate({ id: lead._id, status: "closed" });
                             setShowStudentModal(true);
                           } else {
@@ -1403,11 +1408,14 @@ export default function LeadDetailPage() {
         mode="edit"
       />
 
-      {/* Create Student Modal — fires when status → closed and no student yet */}
-      {showStudentModal && !existingStudent && (
+      {/* Create Student Modal — fires when status → closed. Shown for a lead
+          that is already enrolled too: closing one a second time, after it went
+          to follow-up and came back, showed nothing at all. */}
+      {showStudentModal && (
         <CreateStudentModal
           open
           lead={lead}
+          existingStudent={existingStudent}
           onClose={() => setShowStudentModal(false)}
           onSkip={() => setShowStudentModal(false)}
           onCreated={() => setShowStudentModal(false)}

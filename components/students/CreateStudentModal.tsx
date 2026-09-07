@@ -13,23 +13,49 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { fmtFull } from "@/lib/currency";
-import { useCreateStudent } from "@/hooks/useStudents";
+import { useCreateStudent, useUpdateStudent } from "@/hooks/useStudents";
+import { useAllCourses } from "@/hooks/useCourses";
 import type { Lead } from "@/types/lead";
 import type { Course } from "@/types/course";
-import type { FeeStatus } from "@/types/student";
+import type { FeeStatus, Student } from "@/types/student";
 
 interface Props {
   open: boolean;
   lead: Lead;
+  /**
+   * The enrolment this lead already has, when it has one.
+   *
+   * Closing a lead that was closed before is not a mistake — somebody moved it
+   * to follow-up and back, and wants to see the enrolment again. This used to
+   * skip the dialog entirely and update the status behind their back, so the
+   * second close looked like nothing happened at all.
+   */
+  existingStudent?: Student | null;
   onClose: () => void;
   onSkip: () => void;
   onCreated: () => void;
 }
 
-export function CreateStudentModal({ open, lead, onClose, onSkip, onCreated }: Props) {
-  const courseObj = lead.course && typeof lead.course === "object" ? lead.course as Course : null;
-  const totalFee  = courseObj?.amount ?? 0;
-  const paidAmount = (lead.payments ?? []).reduce((s, p) => s + p.amount, 0);
+export function CreateStudentModal({ open, lead, existingStudent, onClose, onSkip, onCreated }: Props) {
+  const editing = Boolean(existingStudent);
+
+  /** The course the lead already carries, if it was picked during the sale. */
+  const leadCourse = lead.course && typeof lead.course === "object" ? lead.course as Course : null;
+  const studentCourse =
+    existingStudent?.course && typeof existingStudent.course === "object"
+      ? existingStudent.course as Course
+      : null;
+  const knownCourse = studentCourse ?? leadCourse;
+
+  // Only fetched when there is nothing to show, which is the only time it is
+  // needed — a lead that already names its course does not need the list.
+  const { data: courses = [], isLoading: coursesLoading } = useAllCourses();
+
+  const [courseId, setCourseId] = useState(knownCourse?._id ?? "");
+  const pickedCourse = knownCourse ?? courses.find((c) => c._id === courseId) ?? null;
+
+  const totalFee  = existingStudent?.totalFee ?? pickedCourse?.amount ?? 0;
+  const paidAmount = existingStudent?.paidAmount ?? (lead.payments ?? []).reduce((s, p) => s + p.amount, 0);
   const pending   = Math.max(0, totalFee - paidAmount);
 
   const computedFeeStatus: FeeStatus =
@@ -37,11 +63,19 @@ export function CreateStudentModal({ open, lead, onClose, onSkip, onCreated }: P
     : paidAmount >= totalFee         ? "paid"
     :                                  "partial";
 
-  const [notes, setNotes] = useState("");
-  const [enrollmentDate, setEnrollmentDate] = useState(new Date().toISOString().slice(0, 10));
-  const [feeStatus, setFeeStatus] = useState<FeeStatus>(computedFeeStatus);
+  const [notes, setNotes] = useState(existingStudent?.notes ?? "");
+  const [enrollmentDate, setEnrollmentDate] = useState(
+    (existingStudent?.enrollmentDate ?? new Date().toISOString()).slice(0, 10),
+  );
+  const [feeStatus, setFeeStatus] = useState<FeeStatus>(existingStudent?.feeStatus ?? computedFeeStatus);
 
   const createMut = useCreateStudent();
+  const updateMut = useUpdateStudent();
+  const saving = createMut.isPending || updateMut.isPending;
+
+  // An enrolment with no course bills nothing. Where the lead never named one
+  // it has to be chosen here, rather than quietly producing a zero invoice.
+  const courseMissing = !pickedCourse;
 
   function toIST(iso?: string | null) {
     if (!iso) return null;
@@ -52,12 +86,30 @@ export function CreateStudentModal({ open, lead, onClose, onSkip, onCreated }: P
   }
 
   async function handleCreate() {
+    if (editing && existingStudent) {
+      // The enrolment exists; this is the second visit to it. Only the fields
+      // this dialog actually owns are sent, so nothing recorded elsewhere is
+      // overwritten by a stale copy of the lead.
+      await updateMut.mutateAsync({
+        id: existingStudent._id,
+        data: {
+          course: pickedCourse?._id ?? null,
+          enrollmentDate: new Date(enrollmentDate).toISOString(),
+          feeStatus,
+          totalFee,
+          notes: notes || undefined,
+        },
+      });
+      onCreated();
+      return;
+    }
+
     await createMut.mutateAsync({
       leadId: lead._id,
       name:   lead.name,
       phone:  lead.phone ?? undefined,
       email:  lead.email ?? undefined,
-      course: courseObj?._id ?? null,
+      course: pickedCourse?._id ?? null,
       team:   lead.team
         ? typeof lead.team === "object" ? (lead.team as { _id: string })._id : lead.team
         : null,
@@ -103,9 +155,11 @@ export function CreateStudentModal({ open, lead, onClose, onSkip, onCreated }: P
                 </div>
                 <div>
                   <DialogHeader>
-                    <DialogTitle className="text-base font-bold">Create Student Profile</DialogTitle>
+                    <DialogTitle className="text-base font-bold">{editing ? "Enrolment" : "Create Student Profile"}</DialogTitle>
                   </DialogHeader>
-                  <p className="text-xs text-muted-foreground">{lead.name} · Lead closed</p>
+                  <p className="text-xs text-muted-foreground">
+                    {lead.name} · {editing ? `Enrolled ${existingStudent?.enrollmentNumber ?? ""}`.trim() : "Lead closed"}
+                  </p>
                 </div>
               </div>
               <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
@@ -122,7 +176,7 @@ export function CreateStudentModal({ open, lead, onClose, onSkip, onCreated }: P
                     { icon: User2, label: "Name",    value: lead.name },
                     { icon: Phone, label: "Phone",   value: lead.phone },
                     { icon: Mail,  label: "Email",   value: lead.email },
-                    { icon: BookOpen, label: "Course", value: courseObj ? `${courseObj.name}${courseObj.amount ? ` · ${fmtFull(courseObj.amount)}` : ""}` : null },
+                    { icon: BookOpen, label: "Course", value: knownCourse ? `${knownCourse.name}${knownCourse.amount ? ` · ${fmtFull(knownCourse.amount)}` : ""}` : null },
                     { icon: User2, label: "Counsellor", value: assignedName },
                   ].filter((r) => r.value).map(({ icon: Icon, label, value }) => (
                     <div key={label} className="flex items-center gap-3 px-3 py-2.5">
@@ -202,6 +256,34 @@ export function CreateStudentModal({ open, lead, onClose, onSkip, onCreated }: P
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Enrollment</p>
 
+                {/* Only when the lead never named a course. One that did shows
+                    it in the details strip above; asking again there would be
+                    two answers to the same question. */}
+                {!knownCourse && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <BookOpen className="h-3 w-3" /> Course
+                    </p>
+                    <Select value={courseId} onValueChange={setCourseId} disabled={coursesLoading}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder={coursesLoading ? "Loading courses…" : "Select a course"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courses.map((c) => (
+                          <SelectItem key={c._id} value={c._id} className="text-xs">
+                            {c.name}{c.amount ? ` · ${fmtFull(c.amount)}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {courseMissing && !coursesLoading && (
+                      <p className="text-[10px] text-amber-400">
+                        This lead has no course. Pick one — the fee and the invoice come from it.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -253,19 +335,19 @@ export function CreateStudentModal({ open, lead, onClose, onSkip, onCreated }: P
               transition={{ delay: 0.2 }}
               className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border/50 bg-card px-5 py-3"
             >
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={onSkip} disabled={createMut.isPending}>
+              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={onSkip} disabled={saving}>
                 <SkipForward className="h-4 w-4" /> Skip for now
               </Button>
               <Button
                 size="sm"
                 className="gap-2"
                 onClick={handleCreate}
-                disabled={createMut.isPending}
+                disabled={saving || courseMissing}
               >
-                {createMut.isPending ? (
-                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> Creating…</span>
+                {saving ? (
+                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> {editing ? "Saving…" : "Creating…"}</span>
                 ) : (
-                  <><CheckCircle2 className="h-4 w-4" /> Create Student</>
+                  <><CheckCircle2 className="h-4 w-4" /> {editing ? "Save enrolment" : "Create Student"}</>
                 )}
               </Button>
             </motion.div>
