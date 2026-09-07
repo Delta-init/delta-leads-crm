@@ -26,6 +26,7 @@ const courseSchema = z.object({
   name: z.string().min(1, "Course name is required").max(150),
   description: z.string().max(1000).optional(),
   amount: z.coerce.number({ required_error: "Amount is required" }).min(0, "Amount cannot be negative"),
+  hsnSac: z.string().max(20).optional(),
   status: z.enum(["active", "inactive"]).default("active"),
 });
 
@@ -51,7 +52,7 @@ export function CourseDialog({ open, onOpenChange, course }: CourseDialogProps) 
     formState: { errors },
   } = useForm<CourseFormValues>({
     resolver: zodResolver(courseSchema),
-    defaultValues: { name: "", description: "", amount: 0, status: "active" },
+    defaultValues: { name: "", description: "", amount: 0, hsnSac: "", status: "active" },
   });
 
   useEffect(() => {
@@ -61,10 +62,11 @@ export function CourseDialog({ open, onOpenChange, course }: CourseDialogProps) 
           name: course.name,
           description: course.description ?? "",
           amount: course.amount,
+          hsnSac: course.hsnSac ?? "",
           status: course.status,
         });
       } else {
-        reset({ name: "", description: "", amount: 0, status: "active" });
+        reset({ name: "", description: "", amount: 0, hsnSac: "", status: "active" });
       }
     }
   }, [open, course, reset]);
@@ -134,6 +136,17 @@ export function CourseDialog({ open, onOpenChange, course }: CourseDialogProps) 
               {errors.amount && (
                 <p className="text-xs text-destructive">{errors.amount.message}</p>
               )}
+            </div>
+
+            {/* Per course, because the code belongs to what is being sold: two
+                courses on one GST invoice can sit under different codes. Left
+                blank, finance falls back to its own default. */}
+            <div className="space-y-1.5">
+              <Label htmlFor="course-sac">SAC code</Label>
+              <Input id="course-sac" placeholder="e.g. 999293" {...register("hsnSac")} />
+              <p className="text-[11px] text-muted-foreground">
+                Printed on the GST invoice for this course.
+              </p>
             </div>
 
             {/* Status */}

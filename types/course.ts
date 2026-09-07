@@ -5,6 +5,8 @@ export interface Course {
   name: string;
   description?: string;
   amount: number;
+  /** The SAC code this course is billed under, for GST invoices. */
+  hsnSac?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
