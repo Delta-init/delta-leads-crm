@@ -26,6 +26,7 @@ import Link from "next/link";
 import type { LeadStatus } from "@/lib/statusConfig";
 import { LEAD_STATUSES, STATUS_META } from "@/lib/statusConfig";
 import { fmtFull } from "@/lib/currency";
+import { toGstDateISO } from "@/lib/utils";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ export default function TeamMemberPage() {
   const [dateTo, setDateTo]           = useState("");
   const [showDateFilter, setShowDateFilter] = useState(false);
 
-  function todayISO() { return new Date().toISOString().slice(0, 10); }
+  function todayISO() { return toGstDateISO(new Date()); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
 
   function applyToday() {

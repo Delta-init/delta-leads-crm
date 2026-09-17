@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useResponseTimeReport } from "@/hooks/useReports";
 import { useTeams } from "@/hooks/useTeams";
 import type { ResponseTimeAgent, ResponseTimeBreachedLead } from "@/hooks/useReports";
+import { toGstDateISO } from "@/lib/utils";
 
 const pageVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -75,8 +76,8 @@ function StatCard({
 const SLA_PRESETS = [5, 15, 30, 60, 120];
 
 export default function ResponseTimePage() {
-  const today = new Date().toISOString().slice(0, 10);
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const today = toGstDateISO(new Date());
+  const thirtyDaysAgo = toGstDateISO(new Date(Date.now() - 30 * 864e5));
 
   const [teamId, setTeamId] = useState<string>("");
   const [dateFrom, setDateFrom] = useState(thirtyDaysAgo);

@@ -66,6 +66,7 @@ import type {
   SourceAnalyticsItem, CampaignBreakdownItem,
 } from "@/types/reports";
 import { LEAD_STATUSES, STATUS_META as S_META } from "@/lib/statusConfig";
+import { toGstDateISO } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -103,7 +104,7 @@ const TEAM_PALETTE = [
 
 type QuickPeriod = "today" | "week" | "month" | "quarter" | "year" | "custom";
 
-function toISO(d: Date) { return d.toISOString().slice(0, 10); }
+function toISO(d: Date) { return toGstDateISO(d); }
 
 function getQuickRange(p: QuickPeriod): { from: string; to: string } {
   const now   = new Date();

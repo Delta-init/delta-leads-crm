@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTeamDailySourceSplit } from "@/hooks/useTeams";
 import { getInitials } from "@/lib/utils";
+import { toGstDateISO } from "@/lib/utils";
 
 // ─── Source colours (same palette as UpcomingBatch) ──────────────────────────
 
@@ -35,7 +36,7 @@ function todayGST(): string {
 function shiftDay(date: string, days: number): string {
   const d = new Date(`${date}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
+  return toGstDateISO(d);
 }
 
 function formatDayLabel(date: string): string {

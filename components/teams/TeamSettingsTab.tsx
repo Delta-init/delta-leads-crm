@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useTeamSettings, useUpdateTeamSettings, useAutoAssignTeamLeads } from "@/hooks/useTeams";
 import type { Team } from "@/types/team";
 import type { User } from "@/types";
+import { toGstDateISO } from "@/lib/utils";
 
 interface Props {
   teamId: string;
@@ -409,7 +410,7 @@ export function TeamSettingsTab({ teamId, team, isLeaderOrAdmin }: Props) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setStartDate(new Date().toISOString().slice(0, 10))}
+                  onClick={() => setStartDate(toGstDateISO(new Date()))}
                   disabled={!isLeaderOrAdmin}
                   className="gap-1.5 text-xs"
                 >

@@ -32,6 +32,7 @@ import type { Lead } from "@/types/lead";
 import { LEAD_STATUSES, STATUS_META, type LeadStatus } from "@/lib/statusConfig";
 import type { Team } from "@/types/team";
 import type { User } from "@/types";
+import { toGstDateISO } from "@/lib/utils";
 
 // ─── Status options ───────────────────────────────────────────────────────────
 
@@ -79,14 +80,14 @@ function getMemberName(user: User | string | null | undefined): string {
   if (!user) return "";
   return typeof user === "object" ? user.name : user;
 }
-function todayISO() { return new Date().toISOString().slice(0, 10); }
+function todayISO() { return toGstDateISO(new Date()); }
 
 function getRangeFor(period: string): { f: string; t: string } {
-  const now = new Date(); const t = now.toISOString().slice(0, 10);
+  const now = new Date(); const t = toGstDateISO(now);
   if (period === "today") return { f: t, t };
-  if (period === "week")  { const m = new Date(now); m.setDate(now.getDate() - ((now.getDay() + 6) % 7)); return { f: m.toISOString().slice(0, 10), t }; }
-  if (period === "month") return { f: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10), t };
-  return { f: new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10), t };
+  if (period === "week")  { const m = new Date(now); m.setDate(now.getDate() - ((now.getDay() + 6) % 7)); return { f: toGstDateISO(m), t }; }
+  if (period === "month") return { f: toGstDateISO(new Date(now.getFullYear(), now.getMonth(), 1)), t };
+  return { f: toGstDateISO(new Date(now.getFullYear(), 0, 1)), t };
 }
 
 function getColorForIdx(idx: number) {

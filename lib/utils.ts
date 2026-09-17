@@ -40,3 +40,17 @@ export function getInitials(name: string): string {
     .map((word) => word[0]?.toUpperCase() ?? "")
     .join("");
 }
+
+/**
+ * Format a Date as "YYYY-MM-DD" in GST (Asia/Dubai) — timezone-safe.
+ * Never use `.toISOString().slice(0, 10)` for filter dates: it converts to
+ * UTC first, which shifts local midnight back to the previous day.
+ */
+export function toGstDateISO(d: Date): string {
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Dubai" });
+}
+
+/** Today's date as "YYYY-MM-DD" in GST. */
+export function gstTodayISO(): string {
+  return toGstDateISO(new Date());
+}

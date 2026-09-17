@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useFollowUpReport } from "@/hooks/useReports";
 import { useTeams } from "@/hooks/useTeams";
 import type { FollowUpAgentRank, FollowUpOverdueLead, FollowUpLeadBreakdown } from "@/hooks/useReports";
+import { toGstDateISO } from "@/lib/utils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -100,8 +101,8 @@ function StatCard({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function FollowUpReportPage() {
-  const today        = new Date().toISOString().slice(0, 10);
-  const thirtyAgo    = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const today        = toGstDateISO(new Date());
+  const thirtyAgo    = toGstDateISO(new Date(Date.now() - 30 * 864e5));
 
   const [teamId,    setTeamId]    = useState("");
   const [dateFrom,  setDateFrom]  = useState(thirtyAgo);

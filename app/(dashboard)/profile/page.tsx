@@ -42,6 +42,7 @@ import type { LeadStatus } from "@/lib/statusConfig";
 import { LEAD_STATUSES, STATUS_META } from "@/lib/statusConfig";
 import Link from "next/link";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
+import { toGstDateISO } from "@/lib/utils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ export default function ProfilePage() {
     }
   }
 
-  function todayISO() { return new Date().toISOString().slice(0, 10); }
+  function todayISO() { return toGstDateISO(new Date()); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
 
   function applyToday() {

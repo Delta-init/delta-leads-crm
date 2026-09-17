@@ -151,6 +151,7 @@ import { LEAD_STATUSES, STATUS_META as SM } from "@/lib/statusConfig";
 import type { User } from "@/types";
 import { useCurrencyStore } from "@/lib/store/currencyStore";
 import { fmtCompact, fmtFull } from "@/lib/currency";
+import { toGstDateISO } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -324,24 +325,24 @@ type RevQuickPeriod = "today" | "week" | "month" | "quarter" | "year" | "custom"
 
 function getRevRange(p: RevQuickPeriod): { from: string; to: string } {
   const now   = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = toGstDateISO(now);
   switch (p) {
     case "today":   return { from: today, to: today };
     case "week": {
       const mon = new Date(now);
       mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-      return { from: mon.toISOString().slice(0, 10), to: today };
+      return { from: toGstDateISO(mon), to: today };
     }
     case "month": {
       const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { from: first.toISOString().slice(0, 10), to: today };
+      return { from: toGstDateISO(first), to: today };
     }
     case "quarter": {
       const first = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-      return { from: first.toISOString().slice(0, 10), to: today };
+      return { from: toGstDateISO(first), to: today };
     }
     case "year":
-      return { from: new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10), to: today };
+      return { from: toGstDateISO(new Date(now.getFullYear(), 0, 1)), to: today };
     default: return { from: "", to: "" };
   }
 }
@@ -1073,7 +1074,7 @@ function LeadsTab({
   const [dateTo, setDateTo] = useState<string>("");
   const [unassignedOnly, setUnassignedOnly] = useState(false);
 
-  function todayISO() { return new Date().toISOString().slice(0, 10); }
+  function todayISO() { return toGstDateISO(new Date()); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
   function applyToday() {
     const today = todayISO();
@@ -1358,7 +1359,7 @@ function LeadsTab({
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {(() => {
-                        const t = new Date().toISOString().slice(0, 10);
+                        const t = toGstDateISO(new Date());
                         const isActive = splitFrom === t && splitTo === t;
                         return (
                           <button
@@ -1402,11 +1403,11 @@ function LeadsTab({
                       {(["today", "week", "month", "year"] as const).map((p) => {
                         const labels = { today: "Today", week: "This Week", month: "This Month", year: "This Year" };
                         const getRangeFor = (period: string) => {
-                          const now = new Date(); const t = now.toISOString().slice(0,10);
+                          const now = new Date(); const t = toGstDateISO(now);
                           if (period === "today") return { f: t, t };
-                          if (period === "week") { const m = new Date(now); m.setDate(now.getDate()-((now.getDay()+6)%7)); return { f: m.toISOString().slice(0,10), t }; }
-                          if (period === "month") return { f: new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10), t };
-                          return { f: new Date(now.getFullYear(),0,1).toISOString().slice(0,10), t };
+                          if (period === "week") { const m = new Date(now); m.setDate(now.getDate()-((now.getDay()+6)%7)); return { f: toGstDateISO(m), t }; }
+                          if (period === "month") return { f: toGstDateISO(new Date(now.getFullYear(),now.getMonth(),1)), t };
+                          return { f: toGstDateISO(new Date(now.getFullYear(),0,1)), t };
                         };
                         const range = getRangeFor(p);
                         const isActive = dateFrom === range.f && dateTo === range.t;
@@ -2686,17 +2687,17 @@ const ACTION_META: Record<string, { icon: React.ElementType; color: string; bg: 
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return toGstDateISO(new Date());
 }
 function weekStartISO() {
   const d = new Date();
   d.setDate(d.getDate() - d.getDay());
-  return d.toISOString().slice(0, 10);
+  return toGstDateISO(d);
 }
 function monthStartISO() {
   const d = new Date();
   d.setDate(1);
-  return d.toISOString().slice(0, 10);
+  return toGstDateISO(d);
 }
 
 type DatePreset = "today" | "week" | "month" | "custom";
@@ -3240,7 +3241,7 @@ function ActivityRow({ item }: { item: TeamActivityItem }) {
 
 type ReportPeriod = "today" | "week" | "month" | "year" | "custom";
 
-function toISODate(d: Date) { return d.toISOString().slice(0, 10); }
+function toISODate(d: Date) { return toGstDateISO(d); }
 
 function getReportRange(p: ReportPeriod): { from: string; to: string } {
   const now = new Date();

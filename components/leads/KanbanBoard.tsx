@@ -56,6 +56,7 @@ import { fmtFull, getCurrencySymbol } from "@/lib/currency";
 import { INITIAL_RESPONSE_CONFIG, PRIMARY_CONCERN_CONFIG, FOLLOWUP_STRATEGY_CONFIG } from "@/lib/leadConfig";
 
 import { LEAD_STATUSES, STATUS_META } from "@/lib/statusConfig";
+import { toGstDateISO } from "@/lib/utils";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ function useIsMobile() {
 function QuickPaymentDialog({ lead, open, onClose }: { lead: Lead; open: boolean; onClose: () => void }) {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [paidAt, setPaidAt] = useState(() => toGstDateISO(new Date()));
   const addPayment = useAddPayment(lead._id);
 
   function handleSubmit(e: React.FormEvent) {

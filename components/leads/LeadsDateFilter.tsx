@@ -6,6 +6,7 @@ import { CalendarDays, X, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { toGstDateISO } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ export interface LeadsDateFilterProps {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function toISO(d: Date) { return d.toISOString().slice(0, 10); }
+function toISO(d: Date) { return toGstDateISO(d); }
 
 function resolveRange(period: QuickPeriod): { from: string; to: string } {
   const now   = new Date();

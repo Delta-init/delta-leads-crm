@@ -54,6 +54,7 @@ import { FollowupDetailsModal } from "@/components/leads/FollowupDetailsModal";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 import { LEAD_STATUSES, STATUS_META } from "@/lib/statusConfig";
+import { toGstDateISO } from "@/lib/utils";
 
 const THREECX_URL = "https://deltainstitutions.3cx.ae:5002";
 
@@ -596,7 +597,7 @@ function LeadsPageContent() {
     setPage(1);
   }
 
-  function todayISO() { return new Date().toISOString().slice(0, 10); }
+  function todayISO() { return toGstDateISO(new Date()); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
   function applyToday() {
     const today = todayISO();
@@ -1164,7 +1165,7 @@ function LeadsPageContent() {
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {(() => {
-                          const t = new Date().toISOString().slice(0, 10);
+                          const t = toGstDateISO(new Date());
                           const isActive = splitFrom === t && splitTo === t;
                           return (
                             <button
@@ -1207,11 +1208,11 @@ function LeadsPageContent() {
                         {(["today", "week", "month", "year"] as const).map((p) => {
                           const labels = { today: "Today", week: "This Week", month: "This Month", year: "This Year" };
                           const getRangeFor = (period: string) => {
-                            const now = new Date(); const t = now.toISOString().slice(0, 10);
+                            const now = new Date(); const t = toGstDateISO(now);
                             if (period === "today") return { f: t, t };
-                            if (period === "week") { const m = new Date(now); m.setDate(now.getDate() - ((now.getDay() + 6) % 7)); return { f: m.toISOString().slice(0, 10), t }; }
-                            if (period === "month") return { f: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10), t };
-                            return { f: new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10), t };
+                            if (period === "week") { const m = new Date(now); m.setDate(now.getDate() - ((now.getDay() + 6) % 7)); return { f: toGstDateISO(m), t }; }
+                            if (period === "month") return { f: toGstDateISO(new Date(now.getFullYear(), now.getMonth(), 1)), t };
+                            return { f: toGstDateISO(new Date(now.getFullYear(), 0, 1)), t };
                           };
                           const range = getRangeFor(p);
                           const isActive = dateFrom === range.f && dateTo === range.t;

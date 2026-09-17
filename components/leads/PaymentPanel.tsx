@@ -19,6 +19,7 @@ import type { Payment } from "@/types/lead";
 import { useAddPayment, useUpdatePayment, useDeletePayment } from "@/hooks/usePayments";
 import { useCurrencyStore } from "@/lib/store/currencyStore";
 import { fmtCurrency, getCurrencySymbol } from "@/lib/currency";
+import { toGstDateISO } from "@/lib/utils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ interface PaymentFormProps {
 }
 
 function PaymentForm({ initial, onSave, onCancel, saving }: PaymentFormProps) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toGstDateISO(new Date());
   const [amount, setAmount] = useState(initial?.amount ?? "");
   const [note,   setNote]   = useState(initial?.note   ?? "");
   const [paidAt, setPaidAt] = useState(initial?.paidAt ?? today);

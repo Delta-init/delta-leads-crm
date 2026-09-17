@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { cn } from "@/lib/utils";
 import api from "@/lib/axios";
+import { toGstDateISO } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ interface ExportPdfDialogProps {
 
 // ── Period helpers ─────────────────────────────────────────────────────────────
 
-function toISO(d: Date) { return d.toISOString().slice(0, 10); }
+function toISO(d: Date) { return toGstDateISO(d); }
 
 function getRange(p: QuickPeriod): { from: string; to: string } {
   const now   = new Date();
@@ -107,7 +108,7 @@ export function ExportPdfDialog({
       const a    = document.createElement("a");
       a.href     = href;
       const { from, to } = computeRange();
-      const label = from && to ? `${from}_${to}` : new Date().toISOString().slice(0, 10);
+      const label = from && to ? `${from}_${to}` : toGstDateISO(new Date());
       const slug  = entityName
         ? entityName.toLowerCase().replace(/\s+/g, "-") + "-"
         : "";
