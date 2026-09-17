@@ -100,6 +100,8 @@ export default function ProfilePage() {
   const [searchInput,  setSearchInput]  = useState("");
   const [dateFrom,     setDateFrom]     = useState("");
   const [dateTo,       setDateTo]       = useState("");
+  const [splitFrom, setSplitFrom] = useState("");
+  const [splitTo, setSplitTo] = useState("");
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
@@ -143,6 +145,8 @@ export default function ProfilePage() {
     search: search || undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
+    splitFrom: splitFrom || undefined,
+    splitTo: splitTo || undefined,
   });
 
   const leads      = leadsData?.data ?? [];
@@ -346,7 +350,7 @@ export default function ProfilePage() {
                 >
                   <Filter className="h-3.5 w-3.5" />
                   Date Filter
-                  {(dateFrom || dateTo) && (
+                  {(dateFrom || dateTo || splitFrom || splitTo) && (
                     <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">!</span>
                   )}
                 </Button>
@@ -396,6 +400,10 @@ export default function ProfilePage() {
             {/* Row 2 — Date filter panel */}
             {showDateFilter && (
               <LeadsDateFilter
+                splitFrom={splitFrom}
+                splitTo={splitTo}
+                onSplitFromChange={(v) => { setSplitFrom(v); setPage(1); }}
+                onSplitToChange={(v) => { setSplitTo(v); setPage(1); }}
                 dateFrom={dateFrom}
                 dateTo={dateTo}
                 onDateFromChange={(v) => { setDateFrom(v); setPage(1); }}

@@ -83,8 +83,10 @@ export const useUserLeads = (userId: string, filters?: LeadFilters) => {
       if (filters?.limit)    params.limit    = String(filters.limit);
       if (filters?.status)   params.status   = filters.status;
       if (filters?.search)   params.search   = filters.search;
-      if (filters?.dateFrom) params.dateFrom = filters.dateFrom;
-      if (filters?.dateTo)   params.dateTo   = filters.dateTo;
+      if (filters?.dateFrom)  params.dateFrom  = filters.dateFrom;
+      if (filters?.dateTo)    params.dateTo    = filters.dateTo;
+      if (filters?.splitFrom) params.splitFrom = filters.splitFrom;
+      if (filters?.splitTo)   params.splitTo   = filters.splitTo;
       const response = await api.get<ApiResponse<Lead[]>>(`/users/${userId}/leads`, { params });
       return { data: response.data.data ?? [], pagination: response.data.pagination };
     },

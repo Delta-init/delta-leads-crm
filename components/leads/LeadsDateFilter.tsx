@@ -19,6 +19,11 @@ export interface LeadsDateFilterProps {
   onDateToChange: (v: string) => void;
   /** Called when the user picks a quick period; parent receives resolved from/to */
   onQuickPeriod?: (from: string, to: string, period: QuickPeriod) => void;
+  /** Optional split-date (assignedAt) window — rendered as a second section when provided */
+  splitFrom?: string;
+  splitTo?: string;
+  onSplitFromChange?: (v: string) => void;
+  onSplitToChange?: (v: string) => void;
   className?: string;
 }
 
@@ -62,6 +67,10 @@ export function LeadsDateFilter({
   onDateFromChange,
   onDateToChange,
   onQuickPeriod,
+  splitFrom,
+  splitTo,
+  onSplitFromChange,
+  onSplitToChange,
   className,
 }: LeadsDateFilterProps) {
   const [activePeriod, setActivePeriod] = useState<QuickPeriod>("");
@@ -148,6 +157,64 @@ export function LeadsDateFilter({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Split-date (assigned) window — only when the parent wires the props */}
+      {onSplitFromChange && onSplitToChange && (
+        <div className="space-y-1.5 pt-1 border-t border-border/40">
+          <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
+            <CalendarClock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground shrink-0">Split date:</span>
+            {(() => {
+              const t = toISO(new Date());
+              const isActive = splitFrom === t && splitTo === t;
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isActive) { onSplitFromChange(""); onSplitToChange(""); }
+                    else { onSplitFromChange(t); onSplitToChange(t); }
+                  }}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1 text-xs font-medium transition-all",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                  )}
+                >
+                  Split Today
+                </button>
+              );
+            })()}
+            {(splitFrom || splitTo) && (
+              <button
+                type="button"
+                onClick={() => { onSplitFromChange(""); onSplitToChange(""); }}
+                className="ml-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors"
+              >
+                <X className="h-3 w-3" /> Clear
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={splitFrom ?? ""}
+              max={splitTo || undefined}
+              onChange={(e) => onSplitFromChange(e.target.value)}
+              className="h-8 text-xs px-2 flex-1 [color-scheme:dark]"
+            />
+            <span className="text-xs text-muted-foreground shrink-0">→</span>
+            <Input
+              type="date"
+              value={splitTo ?? ""}
+              min={splitFrom || undefined}
+              onChange={(e) => onSplitToChange(e.target.value)}
+              className="h-8 text-xs px-2 flex-1 [color-scheme:dark]"
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground/70">Shows leads split in this range, even if created earlier.</p>
+        </div>
+      )}
     </div>
   );
 }

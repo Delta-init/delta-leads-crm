@@ -458,7 +458,7 @@ export const useTeamMember = (teamId: string, memberId: string) =>
 export const useTeamMemberLeads = (
   teamId: string,
   memberId: string,
-  filters?: { page?: number; limit?: number; status?: string; search?: string; dateFrom?: string; dateTo?: string },
+  filters?: { page?: number; limit?: number; status?: string; search?: string; dateFrom?: string; dateTo?: string; splitFrom?: string; splitTo?: string },
 ) =>
   useQuery({
     queryKey: [...TEAMS_KEY, teamId, "members", memberId, "leads", filters],
@@ -468,8 +468,10 @@ export const useTeamMemberLeads = (
       if (filters?.limit)    params.limit    = String(filters.limit);
       if (filters?.status)   params.status   = filters.status;
       if (filters?.search)   params.search   = filters.search;
-      if (filters?.dateFrom) params.dateFrom = filters.dateFrom;
-      if (filters?.dateTo)   params.dateTo   = filters.dateTo;
+      if (filters?.dateFrom)  params.dateFrom  = filters.dateFrom;
+      if (filters?.dateTo)    params.dateTo    = filters.dateTo;
+      if (filters?.splitFrom) params.splitFrom = filters.splitFrom;
+      if (filters?.splitTo)   params.splitTo   = filters.splitTo;
       const res = await api.get<ApiResponse<Lead[]>>(
         `/teams/${teamId}/members/${memberId}/leads`,
         { params },
