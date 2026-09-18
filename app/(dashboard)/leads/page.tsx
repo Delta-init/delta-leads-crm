@@ -9,7 +9,7 @@ import {
   ArrowUpDown, ArrowUp, ArrowDown, MessageCircle, Sheet,
 } from "lucide-react";
 import Link from "next/link";
-import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
+import { TodayLeadsButton, SplitTodayButton } from "@/components/leads/LeadsDateFilter";
 import { ClickToCall } from "@/components/leads/ClickToCall";
 import { QuickNoteDialog } from "@/components/leads/QuickNoteDialog";
 import { Button } from "@/components/ui/button";
@@ -599,6 +599,13 @@ function LeadsPageContent() {
 
   function todayISO() { return toGstDateISO(new Date()); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
+  const isSplitTodayActive = splitFrom === todayISO() && splitTo === todayISO();
+  function applySplitToday() {
+    const t = todayISO();
+    if (isSplitTodayActive) { setSplitFrom(""); setSplitTo(""); }
+    else { setSplitFrom(t); setSplitTo(t); }
+    setPage(1);
+  }
   function applyToday() {
     const today = todayISO();
     if (isTodayActive) { setDateFrom(""); setDateTo(""); }
@@ -810,6 +817,7 @@ function LeadsPageContent() {
               {/* Right side — Today + filter toggle + view toggle + clear */}
               <div className="flex items-center gap-2 flex-wrap">
                 <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
+                <SplitTodayButton active={isSplitTodayActive} onClick={applySplitToday} />
                 <Button
                   variant={showFilters ? "secondary" : "outline"}
                   size="sm"

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarDays, X, CalendarClock } from "lucide-react";
+import { CalendarDays, X, CalendarClock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -240,6 +240,31 @@ export function TodayLeadsButton({
     >
       <CalendarClock className="h-3.5 w-3.5" />
       Today&apos;s Leads
+    </Button>
+  );
+}
+
+// ── Standalone "Split Today" button (assignedAt = today) ──────────────────────
+
+export function SplitTodayButton({
+  active,
+  onClick,
+}: {
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant={active ? "default" : "outline"}
+      size="sm"
+      className={cn(
+        "gap-1.5 h-8",
+        active && "bg-primary text-primary-foreground",
+      )}
+      onClick={onClick}
+    >
+      <Zap className="h-3.5 w-3.5" />
+      Split Today
     </Button>
   );
 }

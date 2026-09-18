@@ -66,7 +66,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
+import { TodayLeadsButton, SplitTodayButton } from "@/components/leads/LeadsDateFilter";
 import {
   Select,
   SelectContent,
@@ -1076,6 +1076,13 @@ function LeadsTab({
 
   function todayISO() { return toGstDateISO(new Date()); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
+  const isSplitTodayActive = splitFrom === todayISO() && splitTo === todayISO();
+  function applySplitToday() {
+    const t = todayISO();
+    if (isSplitTodayActive) { setSplitFrom(""); setSplitTo(""); }
+    else { setSplitFrom(t); setSplitTo(t); }
+    setPage(1);
+  }
   function applyToday() {
     const today = todayISO();
     if (isTodayActive) { setDateFrom(""); setDateTo(""); }
@@ -1260,6 +1267,7 @@ function LeadsTab({
             {/* Right actions */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
+                <SplitTodayButton active={isSplitTodayActive} onClick={applySplitToday} />
               <Button
                 variant={showFilters ? "secondary" : "outline"}
                 size="sm"

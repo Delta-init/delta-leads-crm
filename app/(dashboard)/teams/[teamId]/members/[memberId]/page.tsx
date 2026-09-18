@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useTeamMember, useTeamMemberLeads } from "@/hooks/useTeams";
 import { formatDate, getInitials } from "@/lib/utils";
-import { LeadsDateFilter, TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
+import { LeadsDateFilter, TodayLeadsButton, SplitTodayButton } from "@/components/leads/LeadsDateFilter";
 import Link from "next/link";
 import type { LeadStatus } from "@/lib/statusConfig";
 import { LEAD_STATUSES, STATUS_META } from "@/lib/statusConfig";
@@ -84,6 +84,13 @@ export default function TeamMemberPage() {
 
   function todayISO() { return toGstDateISO(new Date()); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
+  const isSplitTodayActive = splitFrom === todayISO() && splitTo === todayISO();
+  function applySplitToday() {
+    const t = todayISO();
+    if (isSplitTodayActive) { setSplitFrom(""); setSplitTo(""); }
+    else { setSplitFrom(t); setSplitTo(t); }
+    setPage(1);
+  }
 
   function applyToday() {
     const today = todayISO();
@@ -330,6 +337,7 @@ export default function TeamMemberPage() {
 
               <div className="flex items-center gap-2 flex-wrap">
                 <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
+                <SplitTodayButton active={isSplitTodayActive} onClick={applySplitToday} />
                 <Button
                   variant={showDateFilter ? "secondary" : "outline"}
                   size="sm"

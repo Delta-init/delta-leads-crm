@@ -21,7 +21,7 @@ import { useTeamLeads, useAssignLeadToMember } from "@/hooks/useTeams";
 import { useAllCourses } from "@/hooks/useCourses";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { LeadPreviewPopup } from "@/components/leads/KanbanBoard";
-import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
+import { TodayLeadsButton, SplitTodayButton } from "@/components/leads/LeadsDateFilter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -601,6 +601,8 @@ export function TeamMemberKanban({ teamId, team, canEdit }: TeamMemberKanbanProp
   const [courseId,       setCourseId]       = useState("all");
   const [assignedTo,     setAssignedTo]     = useState("all");
   const [dateFrom,       setDateFrom]       = useState("");
+  const [splitFrom,      setSplitFrom]      = useState("");
+  const [splitTo,        setSplitTo]        = useState("");
   const [dateTo,         setDateTo]         = useState("");
   const [showFilters,    setShowFilters]    = useState(false);
 
@@ -638,8 +640,10 @@ export function TeamMemberKanban({ teamId, team, canEdit }: TeamMemberKanbanProp
     ...(courseId !== "all" ? { course: courseId }   : {}),
     ...(assignedTo !== "all" ? { assignedTo }       : {}),
     ...(dateFrom ? { dateFrom } : {}),
+    ...(splitFrom ? { splitFrom } : {}),
+    ...(splitTo ? { splitTo } : {}),
     ...(dateTo   ? { dateTo }   : {}),
-  }), [debouncedSearch, status, courseId, assignedTo, dateFrom, dateTo]);
+  }), [debouncedSearch, status, courseId, assignedTo, dateFrom, dateTo, splitFrom, splitTo]);
 
   // For status-kanban: pass team + all active filters to KanbanBoard
   const statusKanbanFilters = useMemo(() => ({
@@ -650,11 +654,17 @@ export function TeamMemberKanban({ teamId, team, canEdit }: TeamMemberKanbanProp
   // ── Active filters ─────────────────────────────────────────────────────────
   const activeFilterCount = [
     status !== "all", courseId !== "all", assignedTo !== "all",
-    !!dateFrom, !!dateTo, !!debouncedSearch,
+    !!dateFrom, !!dateTo, !!splitFrom, !!splitTo, !!debouncedSearch,
   ].filter(Boolean).length;
   const hasActiveFilters = activeFilterCount > 0;
 
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
+  const isSplitTodayActive = splitFrom === todayISO() && splitTo === todayISO();
+  function applySplitToday() {
+    const t = todayISO();
+    if (isSplitTodayActive) { setSplitFrom(""); setSplitTo(""); }
+    else { setSplitFrom(t); setSplitTo(t); }
+  }
   function applyToday() {
     if (isTodayActive) { setDateFrom(""); setDateTo(""); }
     else { const t = todayISO(); setDateFrom(t); setDateTo(t); }
@@ -697,6 +707,7 @@ export function TeamMemberKanban({ teamId, team, canEdit }: TeamMemberKanbanProp
           {/* Right controls */}
           <div className="flex items-center gap-2 flex-wrap">
             <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
+            <SplitTodayButton active={isSplitTodayActive} onClick={applySplitToday} />
 
             <Button
               variant={showFilters ? "secondary" : "outline"}
