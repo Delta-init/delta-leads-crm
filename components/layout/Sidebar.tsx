@@ -23,6 +23,7 @@ import {
   GraduationCap,
   PhoneCall,
   Receipt,
+  CalendarCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -53,6 +54,7 @@ export const navItems: { href: string; label: string; icon: React.ElementType; p
   { href: "/courses",   label: "Courses",            icon: BookOpen,        permModule: "courses"   },
   { href: "/reports",   label: "Reports",            icon: BarChart2,       permModule: "reports"   },
   { href: "/users",     label: "Users",              icon: Users,           permModule: "users"     },
+  { href: "/closings", label: "Daily Closings",     icon: CalendarCheck,   permModule: "students"  },
   { href: "/enrolments",label: "My Enrolments",      icon: Receipt,         permModule: "students"  },
   { href: "/students",  label: "Students",           icon: GraduationCap,   permModule: "students"  },
   { href: "/roles",     label: "Roles & Permissions",icon: Shield,          permModule: "roles"     },
