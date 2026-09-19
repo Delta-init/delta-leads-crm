@@ -32,6 +32,10 @@ export interface Student {
   pendingAmount:  number;
   status:         StudentStatus;
   notes?: string;
+  /** Taken at the close, and required there. Absent on older enrolments. */
+  language?: string;
+  paymentMethod?: string;
+  paymentReceipt?: { name: string; url: string; key: string; size?: number; mimeType?: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,4 +79,45 @@ export interface CreateStudentInput {
   totalFee?: number;
   paidAmount?: number;
   notes?: string;
+  language?: string;
+  paymentMethod?: string;
+  paymentReceipt?: { name: string; url: string; key: string; size?: number; mimeType?: string } | null;
+}
+
+/**
+ * What a course is taught in, and how the money came in.
+ *
+ * Fixed lists, not typed boxes. Finance already holds enrolments whose language
+ * reads "MALAYALAM", "Malayalam" and "malayalam" — three answers to one
+ * question, which nothing can count across. The payment methods are spelled the
+ * way finance spells them, because the value is sent straight into its
+ * `declaredPaymentMethod` and a mismatch is refused at the far end.
+ */
+export const ENROLMENT_LANGUAGES = ["English", "Malayalam", "Hindi/Urdu", "Tamil"] as const;
+export type EnrolmentLanguage = (typeof ENROLMENT_LANGUAGES)[number];
+
+export const ENROLMENT_PAYMENT_METHODS = [
+  "cash", "bank_transfer", "cheque", "card",
+  "easebuzz_emi", "tabby", "tamara", "billexpro",
+] as const;
+export type EnrolmentPaymentMethod = (typeof ENROLMENT_PAYMENT_METHODS)[number];
+
+export const PAYMENT_METHOD_LABELS: Record<EnrolmentPaymentMethod, string> = {
+  cash: "Cash",
+  bank_transfer: "Bank Transfer",
+  cheque: "Cheque",
+  card: "Card",
+  easebuzz_emi: "Easebuzz EMI",
+  tabby: "Tabby",
+  tamara: "Tamara",
+  billexpro: "BillExPro",
+};
+
+/** A receipt, once it is in storage. */
+export interface StoredReceipt {
+  name: string;
+  url: string;
+  key: string;
+  size?: number;
+  mimeType?: string;
 }

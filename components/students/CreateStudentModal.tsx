@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap, X, User2, Phone, Mail, BookOpen,
-  Calendar, DollarSign, StickyNote, CheckCircle2,
+  Calendar, DollarSign, StickyNote, CheckCircle2, Paperclip, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { fmtFull } from "@/lib/currency";
-import { useCreateStudent, useUpdateStudent } from "@/hooks/useStudents";
+import { useCreateStudent, useUpdateStudent, uploadReceipt } from "@/hooks/useStudents";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useAddPayment } from "@/hooks/usePayments";
 import type { Lead } from "@/types/lead";
 import type { Course } from "@/types/course";
-import type { FeeStatus, Student } from "@/types/student";
+import type { FeeStatus, Student, StoredReceipt } from "@/types/student";
+import {
+  ENROLMENT_LANGUAGES,
+  ENROLMENT_PAYMENT_METHODS,
+  PAYMENT_METHOD_LABELS,
+} from "@/types/student";
 
 interface Props {
   open: boolean;
@@ -99,6 +104,45 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onCre
   // it has to be chosen here, rather than quietly producing a zero invoice.
   const courseMissing = !pickedCourse;
 
+  /*
+   * Three things a close cannot be made without.
+   *
+   * They exist because finance needs them and had nothing behind them: every
+   * enrolment handed over from here recorded its language as "Not specified",
+   * and none carried how the money was taken or any proof that it had been.
+   * An approver was deciding on an invoice with none of that in front of them.
+   *
+   * Only for a new close. Editing an enrolment made before these existed must
+   * not be blocked on filling in what nobody was asked for at the time.
+   */
+  const [language, setLanguage] = useState<string>(existingStudent?.language ?? "");
+  const [paymentMethod, setPaymentMethod] = useState<string>(existingStudent?.paymentMethod ?? "");
+  const [receipt, setReceipt] = useState<StoredReceipt | null>(
+    (existingStudent?.paymentReceipt as StoredReceipt | undefined) ?? null,
+  );
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const missing = editing
+    ? []
+    : [
+        !language && "language",
+        !paymentMethod && "payment method",
+        !receipt && "payment receipt",
+      ].filter(Boolean) as string[];
+
+  async function handleReceipt(file: File) {
+    setUploadError("");
+    setUploading(true);
+    try {
+      setReceipt(await uploadReceipt(lead._id, file));
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Could not upload that file");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   function toIST(iso?: string | null) {
     if (!iso) return null;
     return new Date(iso).toLocaleString("en-AE", {
@@ -171,6 +215,9 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onCre
       totalFee,
       paidAmount,
       notes: notes || undefined,
+      language,
+      paymentMethod,
+      paymentReceipt: receipt,
     });
     onCreated();
   }
@@ -365,6 +412,89 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onCre
                   </div>
                 )}
 
+                {/* What finance is given about the sale. Side by side because
+                    they are two halves of one question: what was sold, and how
+                    it was paid for. */}
+                {!editing && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Language *</p>
+                      <Select value={language} onValueChange={setLanguage}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Taught in…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ENROLMENT_LANGUAGES.map((l) => (
+                            <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Payment method *</p>
+                      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Paid by…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ENROLMENT_PAYMENT_METHODS.map((m) => (
+                            <SelectItem key={m} value={m} className="text-xs">
+                              {PAYMENT_METHOD_LABELS[m]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {!editing && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Payment receipt *</p>
+                    {receipt ? (
+                      <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/20 px-2.5 py-2">
+                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <a
+                          href={receipt.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 truncate text-xs hover:underline"
+                        >
+                          {receipt.name}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setReceipt(null)}
+                          className="text-[10px] text-muted-foreground hover:text-red-400"
+                        >
+                          Replace
+                        </button>
+                      </div>
+                    ) : (
+                      <label
+                        className={cn(
+                          "flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border/60 px-3 py-3 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                          uploading && "pointer-events-none opacity-60",
+                        )}
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        {uploading ? "Uploading…" : "Attach the receipt — photo or PDF"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) void handleReceipt(f);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                    )}
+                    {uploadError && <p className="text-[10px] text-red-400">{uploadError}</p>}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -416,14 +546,20 @@ export function CreateStudentModal({ open, lead, existingStudent, onClose, onCre
               transition={{ delay: 0.2 }}
               className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border/50 bg-card px-5 py-3"
             >
+              {/* Named rather than left to a greyed-out button: a control that
+                  will not respond and does not say why is the worst of both. */}
               <span className="text-[11px] text-muted-foreground">
-                {editing ? "Changes apply to this enrolment." : "The lead is closed either way."}
+                {missing.length
+                  ? `Still needed: ${missing.join(", ")}.`
+                  : editing
+                    ? "Changes apply to this enrolment."
+                    : "The lead is closed either way."}
               </span>
               <Button
                 size="sm"
                 className="gap-2"
                 onClick={handleCreate}
-                disabled={saving || courseMissing}
+                disabled={saving || courseMissing || missing.length > 0 || uploading}
               >
                 {saving ? (
                   <span className="flex items-center gap-1.5"><span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> {editing ? "Saving…" : "Creating…"}</span>
