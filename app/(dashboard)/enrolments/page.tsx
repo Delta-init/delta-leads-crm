@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   GraduationCap, Search, Receipt, RefreshCw, CheckCircle2, Clock,
-  Undo2, AlertTriangle, FileWarning, Loader2, ExternalLink,
+  Undo2, AlertTriangle, FileWarning, Loader2, ExternalLink, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,8 +27,20 @@ export default function EnrolmentsPage() {
   const [search, setSearch] = useState("");
   const [mine, setMine] = useState(true);
   const [page, setPage] = useState(1);
+  /*
+   * Everything, or only what finance sent back.
+   *
+   * Its own tab rather than a filter buried in a dropdown, because these are
+   * the only enrolments on this screen that are *waiting on the counsellor*.
+   * Everything else here is news; this is a list of work, and work mixed into
+   * news gets read as news.
+   */
+  const [tab, setTab] = useState<"all" | "returned">("all");
 
-  const { data, isLoading, isFetching, refetch } = useMyEnrolments({ mine, search, page, limit: 20 });
+  const { data, isLoading, isFetching, refetch } = useMyEnrolments({
+    mine, search, page, limit: 20,
+    ...(tab === "returned" ? { state: "returned" } : {}),
+  });
   const invoiceMut = useRequestInvoice();
 
   const rows = data?.data ?? [];
@@ -59,6 +72,33 @@ export default function EnrolmentsPage() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Two tabs, because one of them is a to-do list. */}
+      <div className="flex items-center gap-1 border-b border-border/60">
+        {([
+          ["all", "All enrolments"],
+          ["returned", "Sent back"],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => { setTab(key); setPage(1); }}
+            className={cn(
+              "-mb-px border-b-2 px-3 py-2 text-sm transition-colors",
+              tab === key
+                ? "border-primary font-medium text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+            {key === "returned" && (counts?.returned ?? 0) > 0 && (
+              <span className="ml-1.5 rounded-full bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-400">
+                {counts?.returned}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
       {/* ── The bar. Approved and sent back without leaving this screen. ────── */}
       {counts && (
@@ -97,9 +137,13 @@ export default function EnrolmentsPage() {
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-border/50 bg-card px-6 py-16 text-center">
           <GraduationCap className="mx-auto h-8 w-8 text-muted-foreground/50" />
-          <p className="mt-3 text-sm font-medium">No enrolments yet</p>
+          <p className="mt-3 text-sm font-medium">
+            {tab === "returned" ? "Nothing has been sent back" : "No enrolments yet"}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Close a lead and it appears here, with its invoice.
+            {tab === "returned"
+              ? "When finance needs a correction, the enrolment appears here with the reason."
+              : "Close a lead and it appears here, with its invoice."}
           </p>
         </div>
       ) : (
@@ -158,6 +202,9 @@ function EnrolmentRow({ enrolment: e, onGenerate, generating }: {
   const course = e.course && typeof e.course === "object" ? (e.course as Course) : null;
   const inv = e.invoice;
   const h = e.handover;
+  /* Finance if it answered, the outbox's own record if it did not. */
+  const sentBack = (inv?.approval ?? h?.approvalState) === "returned";
+  const reason = inv?.returnedReason || h?.returnedReason || "";
 
   return (
     <motion.div
@@ -184,10 +231,20 @@ function EnrolmentRow({ enrolment: e, onGenerate, generating }: {
             </div>
           ) : null}
 
-          {inv?.approval === "returned" && inv.returnedReason && (
+          {/* Read from finance where it answered, and from what the outbox last
+              heard where it did not — a send-back somebody has to act on should
+              not vanish off the screen because finance is restarting. */}
+          {sentBack && (reason || h?.returnedAt) && (
             <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1.5">
               <Undo2 className="mt-0.5 h-3 w-3 shrink-0 text-red-400" />
-              <p className="text-[11px] text-red-300">Sent back: {inv.returnedReason}</p>
+              <div className="min-w-0">
+                <p className="text-[11px] text-red-300">
+                  Sent back{reason ? `: ${reason}` : " — no reason was given"}
+                </p>
+                <p className="mt-0.5 text-[10px] text-red-300/70">
+                  Correct the enrolment, then send it again. It keeps the same invoice number.
+                </p>
+              </div>
             </div>
           )}
 
@@ -203,7 +260,23 @@ function EnrolmentRow({ enrolment: e, onGenerate, generating }: {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {inv ? (
+          {sentBack ? (
+            <div className="flex flex-col items-end gap-1.5">
+              {inv && <p className="text-xs font-semibold">{inv.invoiceNumber}</p>}
+              {/* The existing enrolment screen, rather than a second form that
+                  edits the same record and drifts from it. */}
+              <Button size="sm" variant="outline" className="gap-2" asChild>
+                <Link href={`/students/${e._id}`}>
+                  <Pencil className="h-3.5 w-3.5" /> Correct it
+                </Link>
+              </Button>
+              <Button size="sm" className="gap-2" onClick={onGenerate} disabled={generating}>
+                {generating
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending…</>
+                  : <><Undo2 className="h-3.5 w-3.5" /> Send again</>}
+              </Button>
+            </div>
+          ) : inv ? (
             <div className="text-right">
               <p className="text-xs font-semibold">{inv.invoiceNumber}</p>
               <p className="text-[10px] text-muted-foreground">

@@ -8,6 +8,10 @@ const KEY = ["enrolments"] as const;
 /** What the outbox knows: whether the enrolment reached finance at all. */
 export interface Handover {
   status: "pending" | "sent" | "failed";
+  /** What the outbox last heard from finance — available even when finance is not. */
+  approvalState: "pending" | "approved" | "returned" | "not_required" | "unknown";
+  returnedReason: string;
+  returnedAt: string | null;
   attempts: number;
   lastError: string;
   invoiceId: string;
@@ -52,13 +56,14 @@ export interface EnrolmentCounts {
   flagged: number;
 }
 
-export const useMyEnrolments = (filters: { mine?: boolean; search?: string; page?: number; limit?: number }) =>
+export const useMyEnrolments = (filters: { mine?: boolean; search?: string; state?: string; page?: number; limit?: number }) =>
   useQuery({
     queryKey: [...KEY, filters],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.mine === false) params.set("mine", "false");
       if (filters.search) params.set("search", filters.search);
+      if (filters.state) params.set("state", filters.state);
       if (filters.page) params.set("page", String(filters.page));
       if (filters.limit) params.set("limit", String(filters.limit));
       const res = await api.get<{
