@@ -273,7 +273,7 @@ function NotesPanel({
             ) : (
               <div className="space-y-3">
                 {sorted.map((note) => {
-                  const isAuthor = typeof note.author === "object"
+                  const isAuthor = typeof note.author === "object" && note.author !== null
                     ? (note.author as User)._id === currentUserId
                     : note.author === currentUserId;
                   const authorName = getUserName(note.author as User | string);
@@ -507,7 +507,7 @@ export default function LeadDetailPage() {
     : null;
 
   const isTeamLeader = !!teamObj?.leaders?.some(
-    (l) => (typeof l === "object" ? l._id : l) === currentUserId,
+    (l) => (typeof l === "object" && l !== null ? l._id : l) === currentUserId,
   );
 
   // Can assign/transfer: must be super admin OR team leader of this lead's team
@@ -515,7 +515,7 @@ export default function LeadDetailPage() {
 
   // Team members available for assignment (only this team's members)
   const teamMembers: User[] = teamObj?.members
-    ? (teamObj.members as User[]).filter((m) => typeof m === "object")
+    ? (teamObj.members as User[]).filter((m) => typeof m === "object" && m !== null)
     : [];
 
   if (isLoading) {
