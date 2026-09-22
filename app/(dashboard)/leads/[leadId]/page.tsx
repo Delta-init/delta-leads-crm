@@ -925,12 +925,22 @@ export default function LeadDetailPage() {
                           } else if (newStatus === "followup") {
                             setFollowupModalOpen(true);
                           } else if (newStatus === "closed") {
-                            // Shown whether or not this lead is already
-                            // enrolled. Closing one a second time used to fall
-                            // through to a bare status update, so the dialog
-                            // never appeared and the close looked like it had
-                            // done nothing.
-                            updateStatus.mutate({ id: lead._id, status: "closed" });
+                            /*
+                             * Held, not written.
+                             *
+                             * Shown whether or not this lead is already
+                             * enrolled — closing one a second time used to fall
+                             * through to a bare status update, so the dialog
+                             * never appeared and the close looked like it had
+                             * done nothing.
+                             *
+                             * But the status used to be applied here, before
+                             * the form had been seen, so dismissing left a lead
+                             * marked closed with no enrolment behind it: a sale
+                             * on the board that finance and the LMS have never
+                             * heard of. It is applied when the enrolment is
+                             * saved and not before.
+                             */
                             setShowStudentModal(true);
                           } else {
                             updateStatus.mutate({ id: lead._id, status: newStatus });
@@ -1416,8 +1426,12 @@ export default function LeadDetailPage() {
           open
           lead={lead}
           existingStudent={existingStudent}
+          // Away, and the lead keeps the status it had.
           onClose={() => setShowStudentModal(false)}
-          onCreated={() => setShowStudentModal(false)}
+          onCreated={() => {
+            setShowStudentModal(false);
+            if (lead.status !== "closed") updateStatus.mutate({ id: lead._id, status: "closed" });
+          }}
         />
       )}
 

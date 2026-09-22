@@ -1952,7 +1952,11 @@ function StudentModalWrapper({ lead, pendingStatus, onClose, onSettled }: {
       open
       lead={lead}
       existingStudent={existingStudent}
-      onClose={onSettled}
+      /* Dismissing is not closing. Both of these ran onSettled, which applied
+         the status — so ✕ or Escape closed the lead anyway and the enrolment
+         form was mandatory in appearance only. A lead marked closed with no
+         enrolment behind it is one finance and the LMS never hear about. */
+      onClose={onClose}
       onCreated={onSettled}
     />
   );

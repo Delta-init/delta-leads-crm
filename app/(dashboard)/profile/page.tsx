@@ -676,7 +676,8 @@ function ProfileStudentModalWrapper({ lead, onClose, onSettled }: {
       open
       lead={lead}
       existingStudent={existingStudent}
-      onClose={onSettled}
+      /* Dismissing is not closing — see the same wiring on the leads list. */
+      onClose={onClose}
       onCreated={onSettled}
     />
   );
