@@ -24,6 +24,7 @@ import {
   PhoneCall,
   Receipt,
   CalendarCheck,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -56,6 +57,10 @@ export const navItems: { href: string; label: string; icon: React.ElementType; p
   { href: "/users",     label: "Users",              icon: Users,           permModule: "users"     },
   { href: "/closings", label: "Daily Closings",     icon: CalendarCheck,   permModule: "students"  },
   { href: "/enrolments",label: "My Enrolments",      icon: Receipt,         permModule: "students"  },
+  /* No permModule — booking an hour with a mentor is work the people doing
+     the work do, not something to gate behind a module first. Same rule the
+     Root portal already holds for this same screen. */
+  { href: "/mentors",   label: "Mentors",            icon: CalendarDays,    permModule: null        },
   { href: "/students",  label: "Students",           icon: GraduationCap,   permModule: "students"  },
   { href: "/roles",     label: "Roles & Permissions",icon: Shield,          permModule: "roles"     },
   { href: "/settings",  label: "Settings",           icon: Settings,        permModule: null        },
