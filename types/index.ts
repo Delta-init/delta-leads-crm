@@ -21,6 +21,17 @@ export const CRM_MODULES = [
   "reports",
   "settings",
   "tracker",
+  /*
+   * "students" was missing here — the backend has always checked it on the
+   * student list, My Enrolments and Daily Closings, but this list never
+   * carried it, so the Edit Role screen never rendered a row for it and no
+   * role but Super Admin could ever be granted access. Restored, and split
+   * into three: a role granted its own sales should not have to also be
+   * granted the whole student list, which one shared module could never do.
+   */
+  "students",
+  "enrolments",
+  "closings",
 ] as const;
 
 export type CrmModule = (typeof CRM_MODULES)[number];
@@ -36,7 +47,12 @@ export const MODULE_LABELS: Record<CrmModule, string> = {
   reports: "Reports",
   settings: "Settings",
   tracker: "Daily Tracker",
+  students: "Students",
+  enrolments: "My Enrolments",
+  closings: "Daily Closings",
 };
+
+
 
 export type PermissionsMap = Partial<Record<CrmModule, ModulePermissions>>;
 

@@ -55,8 +55,8 @@ export const navItems: { href: string; label: string; icon: React.ElementType; p
   { href: "/courses",   label: "Courses",            icon: BookOpen,        permModule: "courses"   },
   { href: "/reports",   label: "Reports",            icon: BarChart2,       permModule: "reports"   },
   { href: "/users",     label: "Users",              icon: Users,           permModule: "users"     },
-  { href: "/closings", label: "Daily Closings",     icon: CalendarCheck,   permModule: "students"  },
-  { href: "/enrolments",label: "My Enrolments",      icon: Receipt,         permModule: "students"  },
+  { href: "/closings", label: "Daily Closings",     icon: CalendarCheck,   permModule: "closings"  },
+  { href: "/enrolments",label: "My Enrolments",      icon: Receipt,         permModule: "enrolments" },
   /* No permModule — booking an hour with a mentor is work the people doing
      the work do, not something to gate behind a module first. Same rule the
      Root portal already holds for this same screen. */
