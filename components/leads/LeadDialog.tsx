@@ -22,7 +22,7 @@ import {
   type CreateLeadFormValues,
   type UpdateLeadFormValues,
 } from "@/lib/validations/leadSchema";
-import { useCreateLead, useUpdateLead } from "@/hooks/useLeads";
+import { useCreateLead, useUpdateLead, useLeadSources } from "@/hooks/useLeads";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useTeams, useTeam } from "@/hooks/useTeams";
 import { useSheetSources } from "@/hooks/useSheetSources";
@@ -55,21 +55,43 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
   const { data: teamsData } = useTeams({ status: "active", limit: 100 });
   const teams = teamsData?.data ?? [];
   const { data: sheetSources = [] } = useSheetSources();
-  // Flatten all source keys across active integrations; fall back to hardcoded list
+  // Every distinct source value leads already carry (imported by the sync
+  // scripts, which never require a Sheet Sources catalog entry) — the
+  // catalog alone is admin-maintained and is often left mostly empty.
+  const { data: distinctSources = [] } = useLeadSources();
+
+  // Flatten catalog entries with their nice "<sheet name> · <key>" labels
   const activeSources = sheetSources.filter((s) => s.isActive);
-  const SOURCES = activeSources.length > 0
-    ? [
-        ...activeSources.flatMap((s) =>
-          s.sources.map((key) => ({
-            value: key,
-            label: `${s.name} · ${key}`,
-            disabled: DISABLED_SOURCES.has(key.trim().toLowerCase()),
-          }))
-        ),
-        // Referral must always be selectable regardless of sheet integrations
-        { value: "referral", label: "Referral" },
-      ]
-    : FALLBACK_SOURCES;
+  const catalogSources = activeSources.flatMap((s) =>
+    s.sources.map((key) => ({
+      value: key,
+      label: `${s.name} · ${key}`,
+      disabled: DISABLED_SOURCES.has(key.trim().toLowerCase()),
+    }))
+  );
+  const catalogValues = new Set(catalogSources.map((s) => s.value.trim().toLowerCase()));
+
+  // Plain sources actually used on leads but missing from the catalog —
+  // shown as-is so they're always selectable even if nobody registered them
+  const plainSources = distinctSources
+    .filter((s) => s && !catalogValues.has(s.trim().toLowerCase()))
+    .map((s) => ({
+      value: s,
+      label: s,
+      disabled: DISABLED_SOURCES.has(s.trim().toLowerCase()),
+    }));
+
+  const SOURCES = [
+    ...catalogSources,
+    ...plainSources,
+    // Referral must always be selectable regardless of sheet integrations
+    ...(catalogValues.has("referral") || distinctSources.some((s) => s.trim().toLowerCase() === "referral")
+      ? []
+      : [{ value: "referral", label: "Referral" }]),
+  ];
+
+  // Nothing real on record anywhere — fall back to the hardcoded starter list
+  const RESOLVED_SOURCES = SOURCES.length > 0 ? SOURCES : FALLBACK_SOURCES;
 
   const isPending = creating || updating;
 
@@ -228,7 +250,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
                   <Select value={field.value ?? ""} onValueChange={field.onChange}>
                     <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
                     <SelectContent>
-                      {SOURCES.map((s) => (
+                      {RESOLVED_SOURCES.map((s) => (
                         <SelectItem
                           key={s.value}
                           value={s.value}
