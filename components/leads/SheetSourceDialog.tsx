@@ -60,8 +60,14 @@ function SourceTagInput({
   const inputRef = useRef<HTMLInputElement>(null);
 
   function addTag() {
-    const trimmed = input.trim().toLowerCase();
-    if (!trimmed || value.includes(trimmed)) { setInput(""); return; }
+    // Preserve casing exactly as typed — must match what the App Script
+    // sends as `source` verbatim. Dedup is case-insensitive so "Website"
+    // and "website" can't both sneak in, but the first casing typed wins.
+    const trimmed = input.trim();
+    if (!trimmed || value.some((v) => v.toLowerCase() === trimmed.toLowerCase())) {
+      setInput("");
+      return;
+    }
     onChange([...value, trimmed]);
     setInput("");
   }
