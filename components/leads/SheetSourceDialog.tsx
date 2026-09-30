@@ -60,10 +60,8 @@ function SourceTagInput({
   const inputRef = useRef<HTMLInputElement>(null);
 
   function addTag() {
-    // Preserve casing exactly as typed — must match what the App Script
-    // sends as `source` verbatim. Dedup is case-insensitive so "Website"
-    // and "website" can't both sneak in, but the first casing typed wins.
-    const trimmed = input.trim();
+    // Keys are uppercase — the backend stores every lead source uppercase
+    const trimmed = input.trim().toUpperCase();
     if (!trimmed || value.some((v) => v.toLowerCase() === trimmed.toLowerCase())) {
       setInput("");
       return;
@@ -114,7 +112,7 @@ function SourceTagInput({
         <Input
           ref={inputRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => setInput(e.target.value.toUpperCase())}
           onKeyDown={onKeyDown}
           onBlur={addTag}
           placeholder="Type a source key and press Enter…"
@@ -186,7 +184,11 @@ export function SheetSourceDialog({ open, onOpenChange, existing }: Props) {
           {/* Name */}
           <div className="space-y-1.5">
             <Label>Sheet Name</Label>
-            <Input {...register("name")} placeholder="e.g. Abhin Google Ads" />
+            <Input
+              {...register("name", { setValueAs: (v: string) => String(v ?? "").toUpperCase() })}
+              onInput={(e) => { e.currentTarget.value = e.currentTarget.value.toUpperCase(); }}
+              placeholder="e.g. ABHIN GOOGLE ADS"
+            />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
 

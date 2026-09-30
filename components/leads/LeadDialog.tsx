@@ -87,7 +87,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
     // Referral must always be selectable regardless of sheet integrations
     ...(catalogValues.has("referral") || distinctSources.some((s) => s.trim().toLowerCase() === "referral")
       ? []
-      : [{ value: "referral", label: "Referral" }]),
+      : [{ value: "REFERRAL", label: "REFERRAL" }]),
   ];
 
   // Nothing real on record anywhere — fall back to the hardcoded starter list
