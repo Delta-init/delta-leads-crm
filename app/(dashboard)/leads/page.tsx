@@ -55,7 +55,12 @@ import { FollowupDetailsModal } from "@/components/leads/FollowupDetailsModal";
 
 import { LEAD_STATUSES, STATUS_META } from "@/lib/statusConfig";
 import { toGstDateISO } from "@/lib/utils";
-import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { SearchableMultiSelect } from "@/components/shared/SearchableSelect";
+
+// Multi-select filters are kept as comma-joined strings ("all" = none) so
+// URL sync, filter counts and "clear all" stay unchanged
+const toArr = (v: string): string[] => (!v || v === "all" ? [] : v.split(","));
+const fromArr = (a: string[]): string => (a.length ? a.join(",") : "all");
 
 const THREECX_URL = "https://deltainstitutions.3cx.ae:5002";
 
@@ -988,33 +993,30 @@ function LeadsPageContent() {
                     {/* Status */}
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-muted-foreground">Status</p>
-                      <Select value={status} onValueChange={(v) => applyFilter(setStatus, v)}>
-                        <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder="All Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUS_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableMultiSelect
+                        values={toArr(status)}
+                        onChange={(a) => applyFilter(setStatus, fromArr(a))}
+                        options={STATUS_OPTIONS.filter((o) => o.value !== "all").map((o) => ({ value: o.value, label: o.label }))}
+                        placeholder="All Status"
+                        searchPlaceholder="Search status…"
+                        noun="statuses"
+                        className="h-9"
+                      />
                     </div>
 
                     {/* Assigned To — only visible to admins/team leaders */}
                     {isAdmin && filterableUsers.length > 0 && (
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-muted-foreground">Assigned To</p>
-                        <Select value={assignedTo} onValueChange={(v) => applyFilter(setAssignedTo, v)}>
-                          <SelectTrigger className="h-9 text-sm">
-                            <SelectValue placeholder="All Members" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            <SelectItem value="all">All Members</SelectItem>
-                            {filterableUsers.map((u) => (
-                              <SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchableMultiSelect
+                          values={toArr(assignedTo)}
+                          onChange={(a) => applyFilter(setAssignedTo, fromArr(a))}
+                          options={filterableUsers.map((u) => ({ value: u._id, label: u.name }))}
+                          placeholder="All Members"
+                          searchPlaceholder="Search members…"
+                          noun="members"
+                          className="h-9"
+                        />
                       </div>
                     )}
 
@@ -1022,17 +1024,15 @@ function LeadsPageContent() {
                     {showReporterFilter && (
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-muted-foreground">Reporter</p>
-                        <Select value={reporter} onValueChange={(v) => applyFilter(setReporter, v)}>
-                          <SelectTrigger className="h-9 text-sm">
-                            <SelectValue placeholder="All Reporters" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            <SelectItem value="all">All Reporters</SelectItem>
-                            {allUsers.map((u) => (
-                              <SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchableMultiSelect
+                          values={toArr(reporter)}
+                          onChange={(a) => applyFilter(setReporter, fromArr(a))}
+                          options={allUsers.map((u) => ({ value: u._id, label: u.name }))}
+                          placeholder="All Reporters"
+                          searchPlaceholder="Search reporters…"
+                          noun="reporters"
+                          className="h-9"
+                        />
                       </div>
                     )}
 
@@ -1040,17 +1040,15 @@ function LeadsPageContent() {
                     {allCourses.length > 0 && (
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-muted-foreground">Course</p>
-                        <Select value={courseId} onValueChange={(v) => applyFilter(setCourseId, v)}>
-                          <SelectTrigger className="h-9 text-sm">
-                            <SelectValue placeholder="All Courses" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            <SelectItem value="all">All Courses</SelectItem>
-                            {allCourses.map((c) => (
-                              <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchableMultiSelect
+                          values={toArr(courseId)}
+                          onChange={(a) => applyFilter(setCourseId, fromArr(a))}
+                          options={allCourses.map((c) => ({ value: c._id, label: c.name }))}
+                          placeholder="All Courses"
+                          searchPlaceholder="Search courses…"
+                          noun="courses"
+                          className="h-9"
+                        />
                       </div>
                     )}
 
@@ -1089,29 +1087,28 @@ function LeadsPageContent() {
                     {isSuperAdmin && (teamsData?.data?.length ?? 0) > 0 && (
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-muted-foreground">Team</p>
-                        <Select value={teamId} onValueChange={(v) => applyFilter(setTeamId, v)}>
-                          <SelectTrigger className="h-9 text-sm">
-                            <SelectValue placeholder="All Teams" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            <SelectItem value="all">All Teams</SelectItem>
-                            {(teamsData?.data ?? []).map((t) => (
-                              <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchableMultiSelect
+                          values={toArr(teamId)}
+                          onChange={(a) => applyFilter(setTeamId, fromArr(a))}
+                          options={(teamsData?.data ?? []).map((t) => ({ value: t._id, label: t.name }))}
+                          placeholder="All Teams"
+                          searchPlaceholder="Search teams…"
+                          noun="teams"
+                          className="h-9"
+                        />
                       </div>
                     )}
 
                     {/* Source */}
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-muted-foreground">Source</p>
-                      <SearchableSelect
-                        value={source}
-                        onChange={(v) => applyFilter(setSource, v)}
-                        options={[{ value: "all", label: "All Sources" }, ...allSources.map((s) => ({ value: s, label: s }))]}
+                      <SearchableMultiSelect
+                        values={toArr(source)}
+                        onChange={(a) => applyFilter(setSource, fromArr(a))}
+                        options={allSources.map((x) => ({ value: x, label: x }))}
                         placeholder="All Sources"
                         searchPlaceholder="Search sources…"
+                        noun="sources"
                         className="h-9"
                       />
                     </div>
@@ -1125,7 +1122,7 @@ function LeadsPageContent() {
                       <Select
                         value={lostReason}
                         onValueChange={(v) => applyFilter(setLostReason, v)}
-                        disabled={status !== "all" && status !== "lost"}
+                        disabled={status !== "all" && !toArr(status).includes("lost")}
                       >
                         <SelectTrigger className="h-9 text-sm">
                           <SelectValue placeholder="All Reasons" />
@@ -1272,29 +1269,29 @@ function LeadsPageContent() {
                   <FilterPill label={`Search: "${debouncedSearch}"`} onRemove={() => { setSearch(""); setDebouncedSearch(""); setPage(1); }} />
                 )}
                 {status !== "all" && (
-                  <FilterPill label={`Status: ${STATUS_LABELS[status as LeadStatus]}`} onRemove={() => applyFilter(setStatus, "all")} />
+                  <FilterPill label={`Status: ${toArr(status).map((x) => STATUS_LABELS[x as LeadStatus] ?? x).join(", ")}`} onRemove={() => applyFilter(setStatus, "all")} />
                 )}
                 {assignedTo !== "all" && (
-                  <FilterPill label={`Assigned: ${userName(assignedTo)}`} onRemove={() => applyFilter(setAssignedTo, "all")} />
+                  <FilterPill label={`Assigned: ${toArr(assignedTo).map(userName).join(", ")}`} onRemove={() => applyFilter(setAssignedTo, "all")} />
                 )}
                 {reporter !== "all" && (
-                  <FilterPill label={`Reporter: ${userName(reporter)}`} onRemove={() => applyFilter(setReporter, "all")} />
+                  <FilterPill label={`Reporter: ${toArr(reporter).map(userName).join(", ")}`} onRemove={() => applyFilter(setReporter, "all")} />
                 )}
                 {courseId !== "all" && (
                   <FilterPill
-                    label={`Course: ${allCourses.find((c) => c._id === courseId)?.name ?? courseId}`}
+                    label={`Course: ${toArr(courseId).map((id) => allCourses.find((c) => c._id === id)?.name ?? id).join(", ")}`}
                     onRemove={() => applyFilter(setCourseId, "all")}
                   />
                 )}
                 {teamId !== "all" && (
                   <FilterPill
-                    label={`Team: ${teamsData?.data?.find((t) => t._id === teamId)?.name ?? teamId}`}
+                    label={`Team: ${toArr(teamId).map((id) => teamsData?.data?.find((t) => t._id === id)?.name ?? id).join(", ")}`}
                     onRemove={() => applyFilter(setTeamId, "all")}
                   />
                 )}
                 {source !== "all" && (
                   <FilterPill
-                    label={`Source: ${source}`}
+                    label={`Source: ${toArr(source).join(", ")}`}
                     onRemove={() => applyFilter(setSource, "all")}
                   />
                 )}
