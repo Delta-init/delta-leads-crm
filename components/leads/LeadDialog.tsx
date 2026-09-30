@@ -27,6 +27,7 @@ import { useAllCourses } from "@/hooks/useCourses";
 import { useTeams, useTeam } from "@/hooks/useTeams";
 import { useSheetSources } from "@/hooks/useSheetSources";
 import type { Lead } from "@/types/lead";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 // Sources never selectable when creating or editing a lead — pick a real source
 const DISABLED_SOURCES = new Set(["other", "social", "direct", "hided source"]);
@@ -247,20 +248,17 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
                 name="source"
                 control={control}
                 render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                    <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
-                    <SelectContent>
-                      {RESOLVED_SOURCES.map((s) => (
-                        <SelectItem
-                          key={s.value}
-                          value={s.value}
-                          disabled={(s as { disabled?: boolean }).disabled}
-                        >
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    options={RESOLVED_SOURCES.map((s) => ({
+                      value: s.value,
+                      label: s.label,
+                      disabled: (s as { disabled?: boolean }).disabled,
+                    }))}
+                    placeholder="Select source"
+                    searchPlaceholder="Search sources…"
+                  />
                 )}
               />
             </div>

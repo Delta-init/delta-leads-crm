@@ -55,6 +55,7 @@ import { FollowupDetailsModal } from "@/components/leads/FollowupDetailsModal";
 
 import { LEAD_STATUSES, STATUS_META } from "@/lib/statusConfig";
 import { toGstDateISO } from "@/lib/utils";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 const THREECX_URL = "https://deltainstitutions.3cx.ae:5002";
 
@@ -1105,17 +1106,14 @@ function LeadsPageContent() {
                     {/* Source */}
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-muted-foreground">Source</p>
-                      <Select value={source} onValueChange={(v) => applyFilter(setSource, v)}>
-                        <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder="All Sources" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-60">
-                          <SelectItem value="all">All Sources</SelectItem>
-                          {allSources.map((s) => (
-                            <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={source}
+                        onChange={(v) => applyFilter(setSource, v)}
+                        options={[{ value: "all", label: "All Sources" }, ...allSources.map((s) => ({ value: s, label: s }))]}
+                        placeholder="All Sources"
+                        searchPlaceholder="Search sources…"
+                        className="h-9"
+                      />
                     </div>
 
                     {/* Lost reason — only a lost lead carries one, so this is disabled
