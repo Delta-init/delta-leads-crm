@@ -29,7 +29,7 @@ import { useSheetSources } from "@/hooks/useSheetSources";
 import type { Lead } from "@/types/lead";
 
 // Sources never selectable when creating or editing a lead — pick a real source
-const DISABLED_SOURCES = new Set(["other", "social", "direct"]);
+const DISABLED_SOURCES = new Set(["other", "social", "direct", "hided source"]);
 
 const FALLBACK_SOURCES = [
   { value: "website",  label: "Website" },
