@@ -15,6 +15,26 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return output;
 }
 
+// Get (or create) this device's push subscription and save it on the server.
+// The server upserts by endpoint, so calling this on every visit is safe — it
+// re-registers devices whose subscription the browser rotated or the server
+// dropped after a 404/410.
+async function syncSubscription(reg: ServiceWorkerRegistration): Promise<void> {
+  let subscription = await reg.pushManager.getSubscription();
+  if (!subscription) {
+    const { data: vapidData } = await api.get<{ data: { publicKey: string } }>(
+      "/push/vapid-public-key"
+    );
+    const applicationServerKey = urlBase64ToUint8Array(vapidData.data.publicKey);
+    subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
+    });
+  }
+  const sub = subscription.toJSON();
+  await api.post("/push/subscribe", { endpoint: sub.endpoint, keys: sub.keys });
+}
+
 export type NotificationPermission = "default" | "granted" | "denied";
 
 export interface UsePushNotificationReturn {
@@ -42,8 +62,14 @@ export function usePushNotification(): UsePushNotificationReturn {
       .register("/push-sw.js")
       .then(async (reg) => {
         swRef.current = reg;
-        const existing = await reg.pushManager.getSubscription();
-        setIsSubscribed(!!existing);
+        if (Notification.permission === "granted") {
+          // Self-heal: already allowed → make sure the server has this device
+          await syncSubscription(reg);
+          setIsSubscribed(true);
+        } else {
+          const existing = await reg.pushManager.getSubscription();
+          setIsSubscribed(!!existing);
+        }
       })
       .catch(() => null);
   }, []);
@@ -65,25 +91,7 @@ export function usePushNotification(): UsePushNotificationReturn {
         swRef.current = reg;
       }
 
-      // Get VAPID public key from backend
-      const { data: vapidData } = await api.get<{ data: { publicKey: string } }>(
-        "/push/vapid-public-key"
-      );
-      const applicationServerKey = urlBase64ToUint8Array(vapidData.data.publicKey);
-
-      // Subscribe
-      const subscription = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
-      });
-
-      // Send subscription to backend
-      const sub = subscription.toJSON();
-      await api.post("/push/subscribe", {
-        endpoint: sub.endpoint,
-        keys: sub.keys,
-      });
-
+      await syncSubscription(reg);
       setIsSubscribed(true);
     } catch (err) {
       console.error("Push subscription failed:", err);

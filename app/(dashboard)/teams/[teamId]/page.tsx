@@ -59,6 +59,8 @@ import {
   ChevronUp,
   Award,
   UserX,
+  BellRing,
+  BellOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,6 +154,7 @@ import type { User } from "@/types";
 import { useCurrencyStore } from "@/lib/store/currencyStore";
 import { fmtCompact, fmtFull } from "@/lib/currency";
 import { toGstDateISO } from "@/lib/utils";
+import { usePushStatus } from "@/hooks/usePushStatus";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -775,6 +778,35 @@ function DashboardTab({
   );
 }
 
+// ─── Push status badge ────────────────────────────────────────────────────────
+
+function PushStatusBadge({ devices }: { devices: number | undefined }) {
+  if (devices === undefined) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  const on = devices > 0;
+  return (
+    <motion.span
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      title={
+        on
+          ? `Notifications on (${devices} device${devices !== 1 ? "s" : ""})`
+          : "Notifications off — this member won't get lead alerts when the app is closed"
+      }
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
+        on
+          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+          : "border-red-500/40 bg-red-500/10 text-red-400",
+      )}
+    >
+      {on ? <BellRing className="h-3 w-3" /> : <BellOff className="h-3 w-3" />}
+      {on ? `ON${devices > 1 ? ` · ${devices}` : ""}` : "OFF"}
+    </motion.span>
+  );
+}
+
 // ─── Members Tab ──────────────────────────────────────────────────────────────
 
 function MembersTab({
@@ -824,6 +856,12 @@ function MembersTab({
   }, [team.absentToday]);
 
   const hasAbsentMembers = absentTodayIds.size > 0;
+
+  // Which members will actually receive lead-assignment alerts
+  const { data: pushStatus } = usePushStatus(
+    (memberStats ?? []).map((m) => m.user._id),
+    isLeaderOrAdmin,
+  );
 
   return (
     <div className="space-y-4">
@@ -897,6 +935,9 @@ function MembersTab({
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Closed</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">Lost</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Conv%</th>
+                    {isLeaderOrAdmin && (
+                      <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center" title="Push notifications for new leads">Alerts</th>
+                    )}
                     {isLeaderOrAdmin && (
                       <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Auto-assign</th>
                     )}
@@ -998,6 +1039,11 @@ function MembersTab({
                           <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
                             <ClosureRateBadge rate={closureRate} />
                           </td>
+                          {isLeaderOrAdmin && (
+                            <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
+                              <PushStatusBadge devices={pushStatus?.[stat.user._id]} />
+                            </td>
+                          )}
                           {isLeaderOrAdmin && (
                             <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
                               <button

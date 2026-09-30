@@ -20,14 +20,19 @@ self.addEventListener("push", (event) => {
   }
 
   const title = payload.title ?? "Delta";
+  // Lead assignments stay on screen until tapped and re-alert (default
+  // system sound) even when an older one with the same tag is still showing.
+  const isLead = payload.data?.type === "lead_assigned";
   const options = {
     body:    payload.body  ?? "",
     icon:    "/icons/icon-192.png",
     badge:   "/icons/icon-192.png",
     tag:     payload.tag   ?? "crm-notification",
     data:    { url: payload.url ?? "/", ...(payload.data ?? {}) },
-    vibrate: [200, 100, 200],
-    requireInteraction: false,
+    vibrate: isLead ? [300, 120, 300, 120, 300] : [200, 100, 200],
+    requireInteraction: isLead,
+    renotify: isLead,
+    silent: false,
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

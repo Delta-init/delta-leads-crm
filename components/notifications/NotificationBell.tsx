@@ -18,6 +18,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { usePushNotification } from "@/hooks/usePushNotification";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { toast } from "@/lib/toast";
+import { playAlertTone } from "@/lib/alertTone";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -246,16 +247,22 @@ export function NotificationBell() {
     if (!accessToken || typeof window === "undefined") return;
     const socket = getSocket(accessToken);
 
-    const handler = (payload: Omit<AppNotification, "id" | "read">) => {
+    const handler = (
+      payload: Omit<AppNotification, "id" | "read" | "type"> & { type?: string; data?: { type?: string } },
+    ) => {
       const notif: AppNotification = {
         ...payload,
+        // the server puts the type inside `data`
+        type: payload.type ?? payload.data?.type ?? "",
         id: `${Date.now()}-${Math.random()}`,
         read: false,
       };
+      const isLead = notif.type === "lead_assigned";
+      if (isLead) playAlertTone();
       setNotifications((prev) => [notif, ...prev].slice(0, 50));
       toast(notif.title, {
         description: notif.body,
-        duration: 5000,
+        duration: isLead ? 15000 : 5000,
         action: notif.url
           ? { label: "View", onClick: () => { window.location.href = notif.url!; } }
           : undefined,
