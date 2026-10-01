@@ -1000,3 +1000,17 @@
 **Props:** `teams: Team[]`, `selectedTeamIds: Set<string>`, `selectedMemberIds: Record<string, Set<string>>`, `lockedTeamId?: string | null`, `lockedMemberId?: string | null`, `onToggleTeam: (id: string) => void`, `onToggleMember: (teamId: string, memberId: string) => void`, `onSetAllMembers: (teamId: string, all: boolean) => void`
 **Used in:** upload page
 **Purpose:** Vertical list of team rows, each expands to show `MemberSelector`. BDE sees only their team (locked, non-removable). Admins can toggle any team + any member. Framer Motion AnimatePresence for expand/collapse.
+
+---
+
+## CloseLeadDialog / CloseLeadsQueue (added 2026-10-01)
+
+**File:** `components/students/CloseLeadDialog.tsx`
+**CloseLeadDialog props:** `lead: Lead`, `progress?: string`, `onClose()`, `onClosed()` — the enrolment dialog (`CreateStudentModal`) for one lead, fetching its existing enrolment first. Mount with `key={lead._id}`.
+**CloseLeadsQueue props:** `leadIds: string[]`, `markClosed(leadId) => Promise`, `onDone({ closed, skipped })` — several leads closed one enrolment after another ("2 of 5"); a dismissed dialog skips that lead, it is not closed. Each lead is fetched fresh (`useLead`).
+**Used in:** leads page (status menu, bulk Change Status → Closed), `KanbanBoard` (card dropped on Closed), team page (bulk Change Status → Closed, closing through the team's own bulk route).
+**Why:** every way of closing a lead goes through its enrolment — a lead closed without one never reaches finance, the LMS or Tetra Commission.
+
+## CreateStudentModal — bonus question (changed 2026-10-01)
+
+"Bonus given? No / Yes" with the amount when yes — required on a first close, editable on Save enrolment. "Pending" is now "Balance" (fee − paid; a bonus is never part of it). New optional prop `progress` for the queue. `EditStudentModal` and the student page's Fee Summary show the bonus too.

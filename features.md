@@ -614,3 +614,14 @@ Copy the template at the top and place it in the correct module section.
 
 **Feature count**: 12
 *(Increment every time you add a feature)*
+
+---
+
+## Enrolment bonus and balance (2026-10-01)
+
+**What**: The enrolment dialog asks "Bonus given? No / Yes" (amount when yes) and shows Balance = total fee − paid (bonus excluded). Dragging a card to Closed on the Kanban, and bulk Change Status → Closed (leads page and team page), now open the enrolment dialog — one after another for several leads — instead of closing without one.
+
+**Components**: `CreateStudentModal`, `EditStudentModal`, `CloseLeadDialog` / `CloseLeadsQueue`, `KanbanBoard`, student detail page.
+
+**Change Log**:
+- 1.0.0 — Bonus question, balance label, every close path through the enrolment dialog

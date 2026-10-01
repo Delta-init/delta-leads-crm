@@ -139,6 +139,8 @@ import { cn, formatDate, getInitials } from "@/lib/utils";
 import { TeamDialog } from "@/components/teams/TeamDialog";
 import TeamRemindersTab from "@/components/teams/TeamRemindersTab";
 import { TeamMemberKanban } from "@/components/teams/TeamMemberKanban";
+import { CloseLeadsQueue } from "@/components/students/CloseLeadDialog";
+import { toast } from "@/lib/toast";
 import { TeamSettingsTab } from "@/components/teams/TeamSettingsTab";
 import { UpcomingBatch } from "@/components/teams/UpcomingBatch";
 import { DailySplitTab } from "@/components/teams/DailySplitTab";
@@ -1152,6 +1154,8 @@ function LeadsTab({
   const [bulkMemberId, setBulkMemberId] = useState<string>("");
   const [bulkNewTeamId, setBulkNewTeamId] = useState<string>("");
   const [bulkStatus, setBulkStatus] = useState<string>("followup");
+  /** Leads chosen to close together: their enrolments open one after another. */
+  const [closeQueue, setCloseQueue] = useState<string[] | null>(null);
 
   const bulkAssignMutation = useBulkAssignTeamLeadsToMember(teamId);
   const bulkTransferMutation = useBulkTransferTeamLeads(teamId);
@@ -2036,6 +2040,12 @@ function LeadsTab({
               size="sm"
               disabled={bulkStatusMutation.isPending}
               onClick={() => {
+                if (bulkStatus === "closed") {
+                  // Closed only through each lead's enrolment, one after another.
+                  setBulkStatusOpen(false);
+                  setCloseQueue(Array.from(selectedIds));
+                  return;
+                }
                 bulkStatusMutation.mutate(
                   { leadIds: Array.from(selectedIds), status: bulkStatus },
                   { onSuccess: () => { setBulkStatusOpen(false); setSelectedIds(new Set()); } },
@@ -2048,6 +2058,20 @@ function LeadsTab({
           </ResponsiveDialogFooter>
         </ResponsiveDialogContent>
       </ResponsiveDialog>
+
+      {/* Several leads closed at once: an enrolment each, closed through the
+          team's own route so a team leader needs no wider permission. */}
+      {closeQueue && (
+        <CloseLeadsQueue
+          leadIds={closeQueue}
+          markClosed={(id) => bulkStatusMutation.mutateAsync({ leadIds: [id], status: "closed" })}
+          onDone={({ closed, skipped }) => {
+            setCloseQueue(null);
+            setSelectedIds(new Set());
+            if (skipped) toast.info(`${closed} closed · ${skipped} left as they were — no enrolment saved`);
+          }}
+        />
+      )}
 
       {/* ── Floating Bulk Action Bar ──────────────────────────────────────────── */}
       <AnimatePresence>
