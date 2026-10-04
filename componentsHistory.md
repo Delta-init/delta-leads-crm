@@ -1014,3 +1014,18 @@
 ## CreateStudentModal — bonus question (changed 2026-10-01)
 
 "Bonus given? No / Yes" with the amount when yes — required on a first close, editable on Save enrolment. "Pending" is now "Balance" (fee − paid; a bonus is never part of it). New optional prop `progress` for the queue. `EditStudentModal` and the student page's Fee Summary show the bonus too.
+
+## MapCourseDialog (added 2026-10-04, replaces MapToFinanceDialog)
+
+**File:** `components/courses/MapCourseDialog.tsx`
+**Props:** `course: Course | null`, `open: boolean`, `onClose: () => void`
+**Used in:** `app/(dashboard)/courses/page.tsx` — the Map button on each course card, and the card's mapping chips
+**Purpose:** Where a course goes when it is sold: the Delta Finance product it bills as (select), and the LMS course(s) the student gets on approval (a checkbox list; tick order is the order they open — two for a bundle). Says so plainly when finance or the LMS is not connected or cannot be read. The same component as the Draw and Remote CRMs.
+
+## CourseDialog (changed 2026-10-04)
+
+A Bonus field (the course's currency, 0 for none) beside the Amount on Add and Edit, with "A new close starts from it". The course card shows "· $X bonus" beside the fee.
+
+## CreateStudentModal (changed 2026-10-04)
+
+A new close starts "Bonus given?" at yes with the course's bonus, marked "From the course — change it if this sale differs"; choosing another course moves it until the seller answers or types an amount (`bonusTouched`). Editing an enrolment never takes it.

@@ -1325,3 +1325,27 @@ Copy the template at the top of this file and add under the correct module secti
 **Params:** `memberId`, `isDone`, `search`, `page`, `limit`
 **Response:** `{ data: TeamReminderItem[], pagination }`
 **Used by:** `TeamRemindersTab`
+
+---
+
+## Course mapping hooks (added 2026-10-04)
+
+**File:** `hooks/useCourses.ts`
+
+| Hook | Query key | Endpoint | Notes |
+|------|-----------|----------|-------|
+| `useLmsCourses(enabled)` | `["lms-courses"]` | `GET /api/v1/courses/lms-courses` | The LMS's published courses (`LmsCourse[]`, by title) |
+| `useMapCourse()` | invalidates `["courses"]` | `PUT /api/v1/courses/:id` | Body `{ financeItemId, lmsCourseSlugs }` — `""` / `[]` unmap |
+
+**Used by:** `MapCourseDialog`. **Types:** `types/course.ts` — `Course.lmsCourseSlug(s)`, `LmsCourse`, `lmsCoursesOf(course)`.
+
+---
+
+## A course's bonus (added 2026-10-04)
+
+| Hook | Endpoint | Notes |
+|------|----------|-------|
+| `useCreateCourse()` (existing) | `POST /api/v1/courses` | Body may carry `bonusAmount` (≥ 0) |
+| `useUpdateCourse()` (existing) | `PUT /api/v1/courses/:id` | Same |
+
+**Types:** `types/course.ts` — `Course.bonusAmount?` (missing on a course from before = none).

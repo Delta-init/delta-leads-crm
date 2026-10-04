@@ -625,3 +625,18 @@ Copy the template at the top and place it in the correct module section.
 
 **Change Log**:
 - 1.0.0 — Bonus question, balance label, every close path through the enrolment dialog
+
+## Course mapping — a finance product and several LMS courses (2026-10-04)
+
+- **Page**: `app/(dashboard)/courses/page.tsx` — "Map" on each course card, and two chips on the card (finance mapped / LMS: N courses)
+- **Dialog**: `components/courses/MapCourseDialog.tsx` (replaces `MapToFinanceDialog`) — the finance product, and the LMS course(s) ticked in the order they open
+- **Backend**: `GET /api/v1/courses/lms-courses`, `PUT /api/v1/courses/:id` with `financeItemId` / `lmsCourseSlugs`
+- **Why**: a bundle ("MBT + DWT") is one course to sell and two to study; the same screen as the Draw and Remote CRMs
+
+## A course's bonus (2026-10-04)
+
+- **Page**: `app/(dashboard)/courses/page.tsx` — the card says "Course fee · $500 bonus" when a course has one
+- **Dialog**: `components/courses/CourseDialog.tsx` — a Bonus field on Add and Edit (0 for none)
+- **Close**: `components/students/CreateStudentModal.tsx` — a new close starts "Bonus given?" at yes with the course's bonus ("From the course — change it if this sale differs"); choosing another course moves it until the seller answers it
+- **Backend**: `POST` / `PUT /api/v1/courses` with `bonusAmount`
+- **Why**: what a course comes with is set once, where the course is, rather than typed at every close
