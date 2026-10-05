@@ -710,3 +710,16 @@ app (Add to Home screen). A notification shown while the CRM is closed uses the 
 
 Commission → Plan says it: a team leader who closes a sale in their own team earns only the Sales Staff amount; the
 Sales Manager closing a sale still earns Sales Staff too. The server works the amounts out (commissionService).
+
+## Salary slabs — My Pay (2026-10-05)
+
+**What it does**: Each person's month on their salary slab (Sales CRM only): the level their approved sales reach, its
+salary, the commission earned and the share of it the level pays, the total, a bar with every level's target, how much
+more the next level takes, and what isn't counted yet (sales waiting for finance, sales still finishing their steps).
+- **Dashboard** (top): the same, compact, with a link to My Pay. A Super Admin not on a slab sees everyone's totals in a line.
+- **My Pay** (`/my-pay`, every role, sidebar): the month (October 2026 on), the card, and the person's slab with their level
+  marked and the next one flagged. A Super Admin also sees everyone: role, approved sales, level, salary, commission, total.
+- **Commission → Plan**: the three slabs (Sales Staff, Team Leader, Sales Manager), edited by a Super Admin — a change
+  holds from this month on; earlier months keep theirs.
+
+**API**: `GET /commission/pay?month=`, `PUT /commission/slabs/:role`; the plan carries the slabs.

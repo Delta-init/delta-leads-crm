@@ -26,6 +26,7 @@ import {
   CalendarCheck,
   CalendarDays,
   Coins,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -62,6 +63,9 @@ export const navItems: { href: string; label: string; icon: React.ElementType; p
      person to their own, their team's, or everyone's. Only a Super Admin
      changes the plan, and that is checked on the server too. */
   { href: "/commission",label: "Commission",         icon: Coins,           permModule: null        },
+  /* No permModule — everyone sees their own month on the salary slabs; a
+     Super Admin everyone's. Narrowed on the server, like Commission. */
+  { href: "/my-pay",    label: "My Pay",             icon: Wallet,          permModule: null        },
   /* No permModule — booking an hour with a mentor is work the people doing
      the work do, not something to gate behind a module first. Same rule the
      Root portal already holds for this same screen. */

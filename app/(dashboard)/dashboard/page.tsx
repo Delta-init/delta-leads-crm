@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useCurrencyStore } from "@/lib/store/currencyStore";
 import { fmtFull } from "@/lib/currency";
 import { DailyFollowupsPopup } from "@/components/leads/DailyFollowupsPopup";
+import { DashboardPayCard } from "@/components/pay/DashboardPayCard";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -113,6 +114,9 @@ export default function DashboardPage() {
           <DailyFollowupsPopup />
         </div>
       </motion.div>
+
+      {/* This month on the salary slab */}
+      <DashboardPayCard />
 
       {/* Stats Grid */}
       <motion.div

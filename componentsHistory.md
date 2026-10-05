@@ -1073,3 +1073,15 @@ A new close starts "Bonus given?" at yes with the course's bonus, marked "From t
 - `NotificationTests` (new, `components/notifications/`) — the collapsible "Test notifications" section in the bell
   panel: device status + Enable, sound buttons (`playAlertSound(kind, { force: true })`), a local test notification
   (`showLocalTestNotification`), and "Send a test to all my devices" (`sendTestPush` → `POST /push/test`).
+
+### Change log — 2026-10-05 (salary slabs)
+- `components/pay/PayMonthCard` (new) — a person's month on their slab (total, salary, commission earned, paid at N%,
+  approved sales, the next level, what isn't counted yet); `compact` for the dashboard. Exports `basisOf(row, own)`.
+- `components/pay/SlabLadder` (new) — `LadderBar` (a bar filled to the month's sales, ticks at each level, scaleX) and
+  `SlabTable` (the slab top-down, the level reached highlighted, the next one flagged).
+- `components/pay/EveryonePayTable` (new) — a Super Admin's table of everyone's month, with totals.
+- `components/pay/DashboardPayCard` (new) — the top of the dashboard: `PayMonthCard compact`, or everyone's totals for a
+  Super Admin not on a slab, or nothing.
+- `components/commission/SlabsCard` (new) — the slabs on Commission → Plan; Super Admin editing (add / remove levels, the
+  base row's target fixed at 0, checks before save).
+- `app/(dashboard)/my-pay/page.tsx` (new) — My Pay; sidebar item "My Pay" (no permModule, like Commission).

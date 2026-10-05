@@ -1392,3 +1392,15 @@ beside `paymentMethod` / `paymentReceipt` (the first payment's). Each new paymen
 
 `hooks/usePushNotification.ts`: `sendTestPush()` → `POST /push/test` (resolves to the server's "Sent to N of M
 devices", rejects with its reason); `showLocalTestNotification()` — the service worker shows a test notification here.
+
+## Salary slabs (added 2026-10-05)
+
+**File:** `hooks/useCommission.ts`
+- `usePay(month)` → `GET /commission/pay?month=YYYY-MM` → `PayView { month, slabs, slabsFrom, me, people, totals }` ·
+  key `["commission", "pay", month]` · retry 1. `me` is null for someone not on a slab; `people` / `totals` only for a
+  Super Admin.
+- `useUpdateSlab()` → `PUT /commission/slabs/:role` `{ rows: SlabRow[] }` → invalidates `["commission"]` (plan and pay).
+- `useCommissionPlan()` — `CommissionPlanView` now has `slabs`, `slabsFrom`, `slabsMonth`.
+
+**Types:** `SlabRow`, `Slabs`, `SlabLevel`, `PayRow`, `PayView` in `types/commission.ts`; `payMonths()`, `PAY_FROM_MONTH`,
+`aedShort()` in `lib/commission.ts`.
