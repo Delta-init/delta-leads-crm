@@ -17,7 +17,8 @@ import { EveryonePayTable } from "@/components/pay/EveryonePayTable";
 
 /**
  * My Pay: a month's salary and commission on the salary slabs (the user,
- * 2026-10-05). Everyone sees their own month; a Super Admin also everyone's.
+ * 2026-10-05). Everyone sees their own month; a Super Admin and the Sales
+ * Manager also everyone's.
  * The slabs themselves are set on Commission → Plan.
  */
 export default function MyPayPage() {

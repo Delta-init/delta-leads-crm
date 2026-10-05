@@ -105,7 +105,7 @@ export interface PayView {
   slabsFrom: string | null;
   /** The viewer's own month; null when they aren't on a slab. */
   me: PayRow | null;
-  /** Everyone — Super Admins only. */
+  /** Everyone — a Super Admin and the Sales Manager only. */
   people: PayRow[] | null;
   totals: { people: number; salary: number; payable: number; total: number } | null;
 }

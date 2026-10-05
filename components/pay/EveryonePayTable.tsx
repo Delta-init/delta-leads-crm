@@ -6,7 +6,7 @@ import { aed, ROLE_SHORT } from "@/lib/commission";
 import { basisOf } from "@/components/pay/PayMonthCard";
 import type { PayRow, PayView } from "@/types/commission";
 
-/** Everyone's month on the slabs, for a Super Admin: level, salary, commission, total. */
+/** Everyone's month on the slabs, for a Super Admin or the Sales Manager: level, salary, commission, total. */
 interface EveryonePayTableProps {
   people: PayRow[];
   totals: NonNullable<PayView["totals"]>;

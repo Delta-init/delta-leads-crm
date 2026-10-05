@@ -718,7 +718,8 @@ salary, the commission earned and the share of it the level pays, the total, a b
 more the next level takes, and what isn't counted yet (sales waiting for finance, sales still finishing their steps).
 - **Dashboard** (top): the same, compact, with a link to My Pay. A Super Admin not on a slab sees everyone's totals in a line.
 - **My Pay** (`/my-pay`, every role, sidebar): the month (October 2026 on), the card, and the person's slab with their level
-  marked and the next one flagged. A Super Admin also sees everyone: role, approved sales, level, salary, commission, total.
+  marked and the next one flagged. A Super Admin and the Sales Manager also see everyone: role, approved sales, level,
+  salary, commission, total (the user: "abrar also see everyone pay"). Team leaders see their own only.
 - **Commission → Plan**: the three slabs (Sales Staff, Team Leader, Sales Manager), edited by a Super Admin — a change
   holds from this month on; earlier months keep theirs.
 

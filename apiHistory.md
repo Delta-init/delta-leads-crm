@@ -1398,7 +1398,7 @@ devices", rejects with its reason); `showLocalTestNotification()` — the servic
 **File:** `hooks/useCommission.ts`
 - `usePay(month)` → `GET /commission/pay?month=YYYY-MM` → `PayView { month, slabs, slabsFrom, me, people, totals }` ·
   key `["commission", "pay", month]` · retry 1. `me` is null for someone not on a slab; `people` / `totals` only for a
-  Super Admin.
+  Super Admin or the Sales Manager.
 - `useUpdateSlab()` → `PUT /commission/slabs/:role` `{ rows: SlabRow[] }` → invalidates `["commission"]` (plan and pay).
 - `useCommissionPlan()` — `CommissionPlanView` now has `slabs`, `slabsFrom`, `slabsMonth`.
 

@@ -1079,7 +1079,7 @@ A new close starts "Bonus given?" at yes with the course's bonus, marked "From t
   approved sales, the next level, what isn't counted yet); `compact` for the dashboard. Exports `basisOf(row, own)`.
 - `components/pay/SlabLadder` (new) — `LadderBar` (a bar filled to the month's sales, ticks at each level, scaleX) and
   `SlabTable` (the slab top-down, the level reached highlighted, the next one flagged).
-- `components/pay/EveryonePayTable` (new) — a Super Admin's table of everyone's month, with totals.
+- `components/pay/EveryonePayTable` (new) — everyone's month with totals, for a Super Admin or the Sales Manager.
 - `components/pay/DashboardPayCard` (new) — the top of the dashboard: `PayMonthCard compact`, or everyone's totals for a
   Super Admin not on a slab, or nothing.
 - `components/commission/SlabsCard` (new) — the slabs on Commission → Plan; Super Admin editing (add / remove levels, the
