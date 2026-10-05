@@ -1382,3 +1382,8 @@ Copy the template at the top of this file and add under the correct module secti
 **File:** `hooks/useUsers.ts` · `POST /users/:id/impersonate` → `{ accessToken, expiresAt, user }` → `beginViewAs` (keeps the
 admin's tokens aside, signs in with the pass, reloads to /dashboard); errors toast the server's message. Ending: `endViewAs()` in
 `lib/impersonation.ts` — `POST /auth/impersonation/stop` with the pass (keepalive), then back to the admin's own tokens and /users.
+
+## Split payments (added 2026-10-05)
+
+`useCreateStudent` sends `payments: [{ method, amount, receipt, paidAt, collectedBefore? }]` (types/student.ts `StudentPayment`)
+beside `paymentMethod` / `paymentReceipt` (the first payment's). Each new payment is added to the lead with `useAddPayment`, once.
