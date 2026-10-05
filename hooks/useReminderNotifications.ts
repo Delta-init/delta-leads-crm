@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { toast } from "@/lib/toast";
+import { playAlertSound } from "@/lib/alertTone";
 import { useMyReminders } from "@/hooks/useReminders";
 import { useSocket } from "@/hooks/useSocket";
 
@@ -70,6 +71,16 @@ function fireBrowserNotification(title: string, body: string) {
   }
 }
 
+/**
+ * A reminder's alert: its sound — the "other" one, not the new-lead one — and
+ * the browser notification. The sound plays whether or not browser
+ * notifications are allowed.
+ */
+function ring(title: string, body: string) {
+  playAlertSound("other");
+  fireBrowserNotification(title, body);
+}
+
 // ─── main hook ────────────────────────────────────────────────────────────────
 
 const THIRTY_MIN_MS = 30 * 60 * 1000;
@@ -108,7 +119,7 @@ export function useReminderNotifications() {
         description: payload.leadName || undefined,
         duration: 10_000,
       });
-      fireBrowserNotification(`⏰ ${payload.title}`, payload.body);
+      ring(`⏰ ${payload.title}`, payload.body);
     };
 
     // ── reminder:warning  (server fires this ~30 min before due time) ────────
@@ -131,7 +142,7 @@ export function useReminderNotifications() {
           : `In ${payload.minsLeft} min`,
         duration: 8_000,
       });
-      fireBrowserNotification(`🔔 ${payload.title} in ${payload.minsLeft} min`, payload.body);
+      ring(`🔔 ${payload.title} in ${payload.minsLeft} min`, payload.body);
     };
 
     socket.on("reminder:due",     onDue);
@@ -168,7 +179,7 @@ export function useReminderNotifications() {
           description: leadName || undefined,
           duration: 8_000,
         });
-        fireBrowserNotification(`⏰ ${label}`, body);
+        ring(`⏰ ${label}`, body);
       }
 
       // Due within 30 min
@@ -185,7 +196,7 @@ export function useReminderNotifications() {
           description: leadName ? `${leadName} — in ${mins} min` : `In ${mins} min`,
           duration: 6_000,
         });
-        fireBrowserNotification(`🔔 ${label} in ${mins} min`, body);
+        ring(`🔔 ${label} in ${mins} min`, body);
       }
     }
   }, [reminders]);

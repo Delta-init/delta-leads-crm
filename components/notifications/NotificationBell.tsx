@@ -19,7 +19,7 @@ import { getViewAs } from "@/lib/impersonation";
 import { usePushNotification } from "@/hooks/usePushNotification";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { toast } from "@/lib/toast";
-import { playAlertTone } from "@/lib/alertTone";
+import { playAlertSound } from "@/lib/alertTone";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -260,7 +260,8 @@ export function NotificationBell() {
         read: false,
       };
       const isLead = notif.type === "lead_assigned";
-      if (isLead) playAlertTone();
+      // The new-lead sound for a lead; the other sound for anything else.
+      playAlertSound(isLead ? "lead" : "other");
       setNotifications((prev) => [notif, ...prev].slice(0, 50));
       toast(notif.title, {
         description: notif.body,

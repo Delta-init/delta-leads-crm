@@ -683,3 +683,15 @@ how it was paid. Editing an enrolment keeps its single "collected now" figure, a
 
 **Change Log**:
 - 1.0.0 — Initial build
+
+## Notification sounds (2026-10-05)
+
+**What it does**: While the CRM is open (any tab, even in the background), a new lead plays its own sound
+(`public/sounds/new-lead.mp3`) and everything else — reminders due or coming up, team messages, status changes —
+plays the other (`public/sounds/notification.mp3`). The user's two recordings, normalised loud (about −12 LUFS,
+peaks at −1 dB), played at full volume through WebAudio; the old two-note chime only if a file can't be loaded.
+Several alerts at once ring once. Browsers allow sound only after one tap or click on the page. A notification
+shown while the CRM is closed uses the device's own sound — a website can't choose it.
+
+**Change Log**:
+- 1.0.0 — Initial build (Sales CRM only)

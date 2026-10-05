@@ -1062,3 +1062,9 @@ A new close starts "Bonus given?" at yes with the course's bonus, marked "From t
   already on the lead), its own receipt upload; add / remove rows. Exports `newPaymentRow`, `rowAmount`, `missingInRows`.
 - `CreateStudentModal` — a new close uses the rows instead of one method and one receipt; red "more than the fee" and a blocked
   save when collected is above the fee (edit mode too).
+
+### Change log — 2026-10-05 (notification sounds)
+- `lib/alertTone.ts` — `playAlertSound("lead" | "other")` plays `/sounds/new-lead.mp3` or `/sounds/notification.mp3`
+  (decoded once, unlocked on the first tap/key; falls back to the old chime). Replaces `playAlertTone`.
+- `NotificationBell` — the lead sound for `lead_assigned`, the other sound for every other notification.
+- `useReminderNotifications` — `ring()`: the other sound and the browser notification, for due and upcoming reminders.
