@@ -695,3 +695,13 @@ shown while the CRM is closed uses the device's own sound — a website can't ch
 
 **Change Log**:
 - 1.0.0 — Initial build (Sales CRM only)
+
+## Test notifications (2026-10-05)
+
+**What it does**: "Test notifications" at the foot of the bell panel (every role): whether this device has
+notifications on (and an Enable button when not), a play button for each sound (new lead / other alerts), a test
+browser notification shown by this browser, and "Send a test to all my devices" — the server pushes to every device
+the person enabled, which is how the installed phone app is checked, even when it's closed. Says how to install the
+app (Add to Home screen). A notification shown while the CRM is closed uses the device's own sound.
+
+**API**: `POST /push/test`.

@@ -20,6 +20,7 @@ import { usePushNotification } from "@/hooks/usePushNotification";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { toast } from "@/lib/toast";
 import { playAlertSound } from "@/lib/alertTone";
+import { NotificationTests } from "@/components/notifications/NotificationTests";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -201,6 +202,14 @@ function NotificationContent({
           {list}
         </div>
       )}
+
+      {/* Sounds, this browser, and every device — on demand */}
+      <NotificationTests
+        isSubscribed={isSubscribed}
+        permission={permission}
+        pushLoading={pushLoading}
+        requestPermission={requestPermission}
+      />
 
       {/* Footer */}
       {notifications.length > 0 && (

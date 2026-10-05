@@ -1387,3 +1387,8 @@ admin's tokens aside, signs in with the pass, reloads to /dashboard); errors toa
 
 `useCreateStudent` sends `payments: [{ method, amount, receipt, paidAt, collectedBefore? }]` (types/student.ts `StudentPayment`)
 beside `paymentMethod` / `paymentReceipt` (the first payment's). Each new payment is added to the lead with `useAddPayment`, once.
+
+## Test notifications (added 2026-10-05)
+
+`hooks/usePushNotification.ts`: `sendTestPush()` → `POST /push/test` (resolves to the server's "Sent to N of M
+devices", rejects with its reason); `showLocalTestNotification()` — the service worker shows a test notification here.

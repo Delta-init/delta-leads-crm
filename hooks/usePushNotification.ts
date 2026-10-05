@@ -142,3 +142,34 @@ export function usePushNotification(): UsePushNotificationReturn {
 
   return { permission, isSubscribed, isLoading, requestPermission, unsubscribe };
 }
+
+/**
+ * "Send a test to my devices": the server pushes a test notification to every
+ * device this person enabled — the installed phone app as much as this
+ * browser, open or closed. Resolves to what the server said ("Sent to 2 of 2
+ * devices"); rejects with its reason (nothing enabled yet, too soon after the
+ * last test).
+ */
+export async function sendTestPush(): Promise<string> {
+  try {
+    const res = await api.post<{ message?: string }>("/push/test");
+    return res.data.message ?? "Test sent";
+  } catch (err) {
+    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    throw new Error(msg ?? "Could not send the test");
+  }
+}
+
+/** A test notification shown by this browser itself, through the same service worker the real ones use. */
+export async function showLocalTestNotification(): Promise<void> {
+  if (!("serviceWorker" in navigator) || !("Notification" in window)) throw new Error("This browser can't show notifications");
+  if (Notification.permission !== "granted") throw new Error("Allow notifications on this device first");
+  const reg = (await navigator.serviceWorker.getRegistration("/push-sw.js")) ?? (await navigator.serviceWorker.ready);
+  await reg.showNotification("Test notification", {
+    body: "Browser notifications work on this device.",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: "crm-test-local",
+    data: { url: "/dashboard", type: "test" },
+  });
+}

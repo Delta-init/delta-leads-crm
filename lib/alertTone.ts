@@ -78,12 +78,15 @@ function chime(ac: AudioContext): void {
   });
 }
 
-/** Ring for a new lead ("lead") or for anything else ("other"), at full volume. */
-export function playAlertSound(kind: AlertSound): void {
+/**
+ * Ring for a new lead ("lead") or for anything else ("other"), at full volume.
+ * `force` — a test button — plays even straight after another alert.
+ */
+export function playAlertSound(kind: AlertSound, { force = false }: { force?: boolean } = {}): void {
   const ac = getContext();
   if (!ac) return;
   const now = Date.now();
-  if (now - (lastPlayed[kind] ?? 0) < QUIET_MS) return;
+  if (!force && now - (lastPlayed[kind] ?? 0) < QUIET_MS) return;
   lastPlayed[kind] = now;
   if (ac.state === "suspended") ac.resume().catch(() => null);
 

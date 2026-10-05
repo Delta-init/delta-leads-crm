@@ -1068,3 +1068,8 @@ A new close starts "Bonus given?" at yes with the course's bonus, marked "From t
   (decoded once, unlocked on the first tap/key; falls back to the old chime). Replaces `playAlertTone`.
 - `NotificationBell` — the lead sound for `lead_assigned`, the other sound for every other notification.
 - `useReminderNotifications` — `ring()`: the other sound and the browser notification, for due and upcoming reminders.
+
+### Change log — 2026-10-05 (test notifications)
+- `NotificationTests` (new, `components/notifications/`) — the collapsible "Test notifications" section in the bell
+  panel: device status + Enable, sound buttons (`playAlertSound(kind, { force: true })`), a local test notification
+  (`showLocalTestNotification`), and "Send a test to all my devices" (`sendTestPush` → `POST /push/test`).
