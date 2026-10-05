@@ -1376,3 +1376,9 @@ Copy the template at the top of this file and add under the correct module secti
 | `useEnrolment(id)` | `["enrolments", "one", id]` | `GET /api/v1/students/enrolments/:id` | The enrolment's own page: steps with who/when, commission |
 
 **Types:** `EnrolmentStep`, `EnrolmentDetail` in `hooks/useEnrolments.ts`; `EnrolmentCommission.onboarded / bonus`.
+
+## useImpersonate — View as (added 2026-10-05)
+
+**File:** `hooks/useUsers.ts` · `POST /users/:id/impersonate` → `{ accessToken, expiresAt, user }` → `beginViewAs` (keeps the
+admin's tokens aside, signs in with the pass, reloads to /dashboard); errors toast the server's message. Ending: `endViewAs()` in
+`lib/impersonation.ts` — `POST /auth/impersonation/stop` with the pass (keepalive), then back to the admin's own tokens and /users.
