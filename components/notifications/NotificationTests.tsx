@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Bell, ChevronDown, Loader2, Monitor, Play, Smartphone } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { playAlertSound } from "@/lib/alertTone";
+import { LEAD_SOUNDS, playAlertSound } from "@/lib/alertTone";
 import { sendTestPush, showLocalTestNotification } from "@/hooks/usePushNotification";
 
 /*
@@ -93,13 +93,17 @@ export function NotificationTests({ isSubscribed, permission, pushLoading, reque
             {/* Sounds */}
             <div className="space-y-1">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Sounds</p>
-              <div className="grid grid-cols-2 gap-2">
-                {([["lead", "New lead"], ["other", "Other alerts"]] as const).map(([kind, label]) => (
+              {/* Each new-lead sound (a lead rings them in turn), and the one for everything else */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  ...LEAD_SOUNDS.map((_, i) => ({ key: `lead-${i}`, label: `New lead ${i + 1}`, play: () => playAlertSound("lead", { force: true, leadSound: i }) })),
+                  { key: "other", label: "Other alerts", play: () => playAlertSound("other", { force: true }) },
+                ].map(({ key, label, play }) => (
                   <motion.button
-                    key={kind}
+                    key={key}
                     type="button"
                     whileTap={{ scale: 0.97 }}
-                    onClick={() => playAlertSound(kind, { force: true })}
+                    onClick={play}
                     className="flex items-center justify-center gap-1.5 rounded-md border border-border/60 px-2 py-1.5 text-[11px] hover:border-primary/50 hover:text-foreground"
                   >
                     <Play className="h-3 w-3" /> {label}

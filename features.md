@@ -739,3 +739,11 @@ more the next level takes, and what isn't counted yet (sales waiting for finance
   new key and the old registration is removed. New keys therefore just work once each person opens the CRM.
 
 **API**: `GET /push/vapid-public-key`, `POST /push/subscribe`, `DELETE /push/unsubscribe` (unchanged).
+
+## A second new-lead sound, taken in turn (2026-10-05)
+
+**What it does**: A new lead rings one of two sounds — the team's first new-lead clip and a second one (WhatsApp audio
+of 2:23:39 PM, the user: "add this audio on when leads arrived, shuffle with others") — taken in a shuffled round, so
+two leads in a row never ring the same. Reminders and everything else keep their own sound. The new file
+(`public/sounds/new-lead-2.mp3`) is made as loud as the others (about −12 LUFS, peaks −1 dB). The bell's Test
+notifications has a play button for each new-lead sound.

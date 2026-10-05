@@ -1,7 +1,9 @@
 // The sounds the CRM plays when something arrives while it is open (the user,
-// 2026-10-05): one for a new lead, another for everything else — reminders,
-// team messages, status changes. Loud on purpose: both files are normalised to
-// about −12 LUFS with peaks at −1 dB, and play at full volume.
+// 2026-10-05): one for everything else — reminders, team messages, status
+// changes — and, for a new lead, the team's lead sounds taken in turn (a second
+// one added the same day: "shuffle with others"), so leads arriving one after
+// another don't ring the same. Loud on purpose: every file is normalised to
+// about −12 LUFS with peaks at −1 dB, and plays at full volume.
 //
 // Played through WebAudio, from files fetched and decoded once. Browsers only
 // allow audio after the user has interacted with the page, so the context is
@@ -14,16 +16,15 @@
 
 export type AlertSound = "lead" | "other";
 
-const FILES: Record<AlertSound, string> = {
-  lead: "/sounds/new-lead.mp3",
-  other: "/sounds/notification.mp3",
-};
+/** The new-lead sounds, taken in turn. */
+export const LEAD_SOUNDS = ["/sounds/new-lead.mp3", "/sounds/new-lead-2.mp3"] as const;
+const OTHER_SOUND = "/sounds/notification.mp3";
 
 /** Several alerts at once — a batch of leads, a stack of reminders — ring once, not on top of each other. */
 const QUIET_MS = 1500;
 
 let ctx: AudioContext | null = null;
-const buffers: Partial<Record<AlertSound, Promise<AudioBuffer | null>>> = {};
+const buffers: Record<string, Promise<AudioBuffer | null> | undefined> = {};
 const lastPlayed: Partial<Record<AlertSound, number>> = {};
 
 function getContext(): AudioContext | null {
@@ -34,25 +35,45 @@ function getContext(): AudioContext | null {
   return ctx;
 }
 
-/** The sound, decoded once; null when it can't be had (the chime plays instead). */
-function load(kind: AlertSound): Promise<AudioBuffer | null> {
+/** A sound file, decoded once; null when it can't be had (the chime plays instead). */
+function load(file: string): Promise<AudioBuffer | null> {
   const ac = getContext();
   if (!ac) return Promise.resolve(null);
-  buffers[kind] ??= fetch(FILES[kind])
-    .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(`${FILES[kind]}: ${res.status}`))))
+  buffers[file] ??= fetch(file)
+    .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(`${file}: ${res.status}`))))
     .then((data) => ac.decodeAudioData(data))
     .catch(() => {
-      delete buffers[kind]; // try again next time
+      delete buffers[file]; // try again next time
       return null;
     });
-  return buffers[kind]!;
+  return buffers[file]!;
+}
+
+/*
+ * The lead sounds in a shuffled round: each is played once before any plays
+ * again, and a new round never starts with the one that ended the last — so
+ * two leads in a row never ring the same.
+ */
+let leadRound: number[] = [];
+let lastLead = -1;
+export function nextLeadSound(random: () => number = Math.random): number {
+  if (leadRound.length === 0) {
+    leadRound = LEAD_SOUNDS.map((_, i) => i);
+    for (let i = leadRound.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [leadRound[i], leadRound[j]] = [leadRound[j], leadRound[i]];
+    }
+    if (leadRound.length > 1 && leadRound[0] === lastLead) leadRound.push(leadRound.shift()!);
+  }
+  lastLead = leadRound.shift()!;
+  return lastLead;
 }
 
 if (typeof window !== "undefined") {
   const unlock = () => {
     getContext()?.resume().catch(() => null);
-    void load("lead");
-    void load("other");
+    for (const file of LEAD_SOUNDS) void load(file);
+    void load(OTHER_SOUND);
     window.removeEventListener("pointerdown", unlock);
     window.removeEventListener("keydown", unlock);
   };
@@ -80,9 +101,13 @@ function chime(ac: AudioContext): void {
 
 /**
  * Ring for a new lead ("lead") or for anything else ("other"), at full volume.
- * `force` — a test button — plays even straight after another alert.
+ * `force` — a test button — plays even straight after another alert; `leadSound`
+ * picks one of the lead sounds instead of the next in turn.
  */
-export function playAlertSound(kind: AlertSound, { force = false }: { force?: boolean } = {}): void {
+export function playAlertSound(
+  kind: AlertSound,
+  { force = false, leadSound }: { force?: boolean; leadSound?: number } = {},
+): void {
   const ac = getContext();
   if (!ac) return;
   const now = Date.now();
@@ -90,7 +115,8 @@ export function playAlertSound(kind: AlertSound, { force = false }: { force?: bo
   lastPlayed[kind] = now;
   if (ac.state === "suspended") ac.resume().catch(() => null);
 
-  void load(kind).then((buffer) => {
+  const file = kind === "other" ? OTHER_SOUND : LEAD_SOUNDS[leadSound ?? nextLeadSound()] ?? LEAD_SOUNDS[0];
+  void load(file).then((buffer) => {
     if (!buffer) {
       chime(ac);
       return;
