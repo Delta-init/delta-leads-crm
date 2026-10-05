@@ -747,3 +747,19 @@ of 2:23:39 PM, the user: "add this audio on when leads arrived, shuffle with oth
 two leads in a row never ring the same. Reminders and everything else keep their own sound. The new file
 (`public/sounds/new-lead-2.mp3`) is made as loud as the others (about −12 LUFS, peaks −1 dB). The bell's Test
 notifications has a play button for each new-lead sound.
+
+## Correct a sent-back enrolment, and see it was sent again (2026-10-05)
+
+**What it does**: When finance sends an enrolment back, "Correct it" (My Enrolments, the enrolment's page, and a banner
+on the student's page) opens the whole closing form, filled in: the client's name, phone and email, the course, the fee,
+each payment with its receipt, the language, the date, the fee status, the bonus and the notes — and, for whoever may
+edit students, who closed it and for which team. "Save & send again" saves it and sends it to finance in one step, as
+the same invoice (the user: "if send it back we can edit the course and amount also, all details"). The money already
+on the lead stays its own payment at what the lead's own payments come to; its method and receipt can change.
+
+Once sent again — corrected, or with "Send again" — the card says so, as plainly as it said "Sent back": a "Sending
+again" badge while it is on its way, then "Sent again" with the time (and how many times), "waiting for approval"; the
+steps line and the enrolment's page say the same (the user: "if send again show that also"). Cards on their way to
+finance are looked at again every few seconds rather than every thirty.
+
+**API**: `GET /students/:id/correction`, `PUT /students/:id/correction`; `handover.resentAt` / `resends` on the lists.
