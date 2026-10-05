@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import api from "@/lib/axios";
 import { toast } from "@/lib/toast";
 import { getViewAs } from "@/lib/impersonation";
+import { madeWithKey, subscriptionKey } from "@/lib/pushKey";
 
 /**
  * This browser's push subscription belongs to whoever signed in on it — while
@@ -31,14 +32,23 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 // Get (or create) this device's push subscription and save it on the server.
 // The server upserts by endpoint, so calling this on every visit is safe — it
 // re-registers devices whose subscription the browser rotated or the server
-// dropped after a 404/410.
+// dropped after a 404/410/403.
 async function syncSubscription(reg: ServiceWorkerRegistration): Promise<void> {
+  const { data: vapidData } = await api.get<{ data: { publicKey: string } }>(
+    "/push/vapid-public-key"
+  );
+  const publicKey = vapidData.data.publicKey;
   let subscription = await reg.pushManager.getSubscription();
+  // Made with another VAPID key (the server's keys were changed): it can never
+  // be delivered to — make it again with this key, and have the server forget the old one.
+  if (subscription && !madeWithKey(subscriptionKey(subscription), publicKey)) {
+    const old = subscription.endpoint;
+    await subscription.unsubscribe().catch(() => false);
+    await api.delete("/push/unsubscribe", { data: { endpoint: old } }).catch(() => null);
+    subscription = null;
+  }
   if (!subscription) {
-    const { data: vapidData } = await api.get<{ data: { publicKey: string } }>(
-      "/push/vapid-public-key"
-    );
-    const applicationServerKey = urlBase64ToUint8Array(vapidData.data.publicKey);
+    const applicationServerKey = urlBase64ToUint8Array(publicKey);
     subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: applicationServerKey.buffer as ArrayBuffer,

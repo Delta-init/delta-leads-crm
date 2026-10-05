@@ -724,3 +724,18 @@ more the next level takes, and what isn't counted yet (sales waiting for finance
   holds from this month on; earlier months keep theirs.
 
 **API**: `GET /commission/pay?month=`, `PUT /commission/slabs/:role`; the plan carries the slabs.
+
+## Notifications keep arriving (2026-10-05)
+
+**What it does**: New-lead notifications and browser notifications kept failing (the user, 2026-10-05).
+- **Live notifications** (the bell, the new-lead sound, the sidebar's counts, reminders, team rooms): one live connection
+  per tab (`lib/socket.ts`; `useSocket` hands out the same one), which never gives up — it used to stop after five quick
+  tries, so after a server restart, a dropped network or a sleeping laptop the bell stayed quiet until the page was
+  reloaded. Every try signs in with the latest token; it tries again at once when the tab is looked at again or the
+  network comes back; somebody else signing in on the tab gets their own connection. Team rooms are joined again on
+  every reconnect.
+- **Browser notifications**: with notifications allowed, every visit makes sure the server has this device — and if the
+  server's VAPID key has changed since the device registered (`lib/pushKey.ts`), the device is registered again with the
+  new key and the old registration is removed. New keys therefore just work once each person opens the CRM.
+
+**API**: `GET /push/vapid-public-key`, `POST /push/subscribe`, `DELETE /push/unsubscribe` (unchanged).
