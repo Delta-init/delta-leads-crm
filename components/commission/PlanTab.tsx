@@ -56,7 +56,8 @@ export function PlanTab() {
 const RULES = {
   zero_if_sm: [
     "Every sale finance approves pays its closer (Sales Staff), their team's leader (TL) and the Sales Manager (SM).",
-    "A TL or the Sales Manager who closes a sale also earns the Sales Staff amount.",
+    "A team leader who closes a sale in their own team earns only the Sales Staff amount — no TL amount on it.",
+    "The Sales Manager who closes a sale also earns the Sales Staff amount.",
     "On a team the Sales Manager leads, the TL amount is 0. He's paid as SM.",
   ],
   always: [

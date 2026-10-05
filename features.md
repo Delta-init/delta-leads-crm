@@ -705,3 +705,8 @@ the person enabled, which is how the installed phone app is checked, even when i
 app (Add to Home screen). A notification shown while the CRM is closed uses the device's own sound.
 
 **API**: `POST /push/test`.
+
+## Commission: a team leader's own close (2026-10-05)
+
+Commission → Plan says it: a team leader who closes a sale in their own team earns only the Sales Staff amount; the
+Sales Manager closing a sale still earns Sales Staff too. The server works the amounts out (commissionService).
