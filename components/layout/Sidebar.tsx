@@ -50,7 +50,7 @@ import { getSocket } from "@/lib/socket";
 
 export const navItems: { href: string; label: string; icon: React.ElementType; permModule: string | null }[] = [
   { href: "/dashboard", label: "Dashboard",          icon: LayoutDashboard, permModule: "dashboard" },
-  { href: "/my-tracker",label: "My Tracker",         icon: ClipboardCheck,  permModule: "tracker"   },
+  { href: "/my-tracker",label: "My Tracker",         icon: ClipboardCheck,  permModule: "tracker" },
   { href: "/leads",     label: "Leads",              icon: FileText,        permModule: "leads"     },
   { href: "/calls",     label: "Calls",              icon: PhoneCall,       permModule: "leads"     },
   { href: "/reminders", label: "Reminders",          icon: Bell,            permModule: "reminders" },
@@ -60,19 +60,14 @@ export const navItems: { href: string; label: string; icon: React.ElementType; p
   { href: "/users",     label: "Users",              icon: Users,           permModule: "users"     },
   { href: "/closings", label: "Daily Closings",     icon: CalendarCheck,   permModule: "closings"  },
   { href: "/enrolments",label: "My Enrolments",      icon: Receipt,         permModule: "enrolments" },
-  /* No permModule — everyone sees their own pay; the server narrows each
-     person to their own, their team's, or everyone's. Only a Super Admin
-     changes the plan, and that is checked on the server too. */
-  { href: "/commission",label: "Commission",         icon: Coins,           permModule: null        },
-  /* No permModule — everyone sees the month's leaderboard (the owner, 2026-10-07). */
-  { href: "/leaderboard",label: "Leaderboard",       icon: Trophy,          permModule: null        },
-  /* No permModule — everyone sees their own month on the salary slabs; a
-     Super Admin everyone's. Narrowed on the server, like Commission. */
-  { href: "/my-pay",    label: "My Pay",             icon: Wallet,          permModule: null        },
-  /* No permModule — booking an hour with a mentor is work the people doing
-     the work do, not something to gate behind a module first. Same rule the
-     Root portal already holds for this same screen. */
-  { href: "/mentors",   label: "Mentors",            icon: CalendarDays,    permModule: null        },
+  /* Commission, Leaderboard, Mentors and My Pay were open to everyone and stay open to
+     every role until its box is unticked on the Roles screen (2026-10-07).
+     Commission and My Pay: the server narrows each person to their own, their team's
+     or everyone's, and only a Super Admin changes the plan or slabs. */
+  { href: "/commission",label: "Commission",         icon: Coins,           permModule: "commission" },
+  { href: "/leaderboard",label: "Leaderboard",       icon: Trophy,          permModule: "leaderboard" },
+  { href: "/my-pay",    label: "My Pay",             icon: Wallet,          permModule: "pay" },
+  { href: "/mentors",   label: "Mentors",            icon: CalendarDays,    permModule: "mentors" },
   { href: "/students",  label: "Students",           icon: GraduationCap,   permModule: "students"  },
   { href: "/roles",     label: "Roles & Permissions",icon: Shield,          permModule: "roles"     },
   { href: "/settings",  label: "Settings",           icon: Settings,        permModule: null        },
