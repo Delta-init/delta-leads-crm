@@ -13,6 +13,7 @@ import { useReportTeamRankings } from "@/hooks/useReports";
 import { cn } from "@/lib/utils";
 import { useCurrencyStore } from "@/lib/store/currencyStore";
 import { fmtFull } from "@/lib/currency";
+import { DashboardLeaderboardCard } from "@/components/dashboard/DashboardLeaderboardCard";
 import { DailyFollowupsPopup } from "@/components/leads/DailyFollowupsPopup";
 import { DashboardPayCard } from "@/components/pay/DashboardPayCard";
 
@@ -117,6 +118,9 @@ export default function DashboardPage() {
 
       {/* This month on the salary slab */}
       <DashboardPayCard />
+
+      {/* This month's leaderboard */}
+      <DashboardLeaderboardCard />
 
       {/* Stats Grid */}
       <motion.div
