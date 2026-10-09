@@ -36,7 +36,7 @@ import { useLead, useUpdateLeadStatus, useAssignLead, useAddLeadNote, useUpdateL
 import { useAllCourses } from "@/hooks/useCourses";
 import { useTeams } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
-import { formatDate, getInitials } from "@/lib/utils";
+import { formatDate, formatDateTime, getInitials } from "@/lib/utils";
 import type { LeadNote, ActivityLog, ActivityAction } from "@/types/lead";
 import type { LeadStatus } from "@/lib/statusConfig";
 import type { Course } from "@/types/course";
@@ -48,6 +48,7 @@ import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import { PaymentPanel } from "@/components/leads/PaymentPanel";
 import { CallsPanel } from "@/components/leads/CallsPanel";
 import { FollowUpPanel } from "@/components/leads/FollowUpPanel";
+import { LeadTimings } from "@/components/leads/LeadTimings";
 import { ClickToCall } from "@/components/leads/ClickToCall";
 import { LOST_REASONS, LostReasonModal } from "@/components/leads/LostReasonModal";
 
@@ -560,6 +561,15 @@ export default function LeadDetailPage() {
         )}
       </motion.div>
 
+      {/* Created, last updated, last and next follow-up — in GST */}
+      <LeadTimings
+        createdAt={lead.createdAt}
+        originalCreatedAt={lead.originalCreatedAt}
+        updatedAt={lead.updatedAt}
+        lastFollowupDate={lead.lastFollowupDate}
+        nextFollowUpAt={lead.nextFollowUpAt}
+      />
+
       {/* Two-column layout */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left column — Lead info */}
@@ -804,12 +814,12 @@ export default function LeadDetailPage() {
                   </motion.div>
                 )}
 
-                <InfoRow icon={Calendar} label="Created" value={formatDate(lead.createdAt)} />
+                <InfoRow icon={Calendar} label="Created" value={formatDateTime(lead.createdAt)} />
                 {/* Handed over since — createdAt is the hand-over; this is when it first came in. */}
                 {lead.originalCreatedAt && (
-                  <InfoRow icon={Calendar} label="First created" value={formatDate(lead.originalCreatedAt)} />
+                  <InfoRow icon={Calendar} label="First created" value={formatDateTime(lead.originalCreatedAt)} />
                 )}
-                <InfoRow icon={Clock} label="Last Updated" value={formatDate(lead.updatedAt)} />
+                <InfoRow icon={Clock} label="Last Updated" value={formatDateTime(lead.updatedAt)} />
 
                 {/* Call Not Connected Counter */}
                 <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">
