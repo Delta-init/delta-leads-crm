@@ -22,6 +22,7 @@ import { useStudent, useUpdateStudent } from "@/hooks/useStudents";
 import { useEnrolmentCorrection, uaeTime } from "@/hooks/useEnrolments";
 import { useAuthStore } from "@/lib/store/authStore";
 import { CorrectEnrolmentDialog } from "@/components/students/CorrectEnrolmentDialog";
+import { AddEnrolmentEmail } from "@/components/students/AddEnrolmentEmail";
 import { INITIAL_RESPONSE_CONFIG, PRIMARY_CONCERN_CONFIG, FOLLOWUP_STRATEGY_CONFIG } from "@/lib/leadConfig";
 import type { Course } from "@/types/course";
 import type { User } from "@/types";
@@ -178,6 +179,13 @@ export default function StudentDetailPage() {
             <Edit2 className="h-3.5 w-3.5" /> Correct &amp; send again
           </Button>
         </motion.div>
+      )}
+      {/* Refused by finance for the client's email (asked only by whoever may act on enrolments): given it here, sent again. */}
+      {correction?.needsClientEmail && <AddEnrolmentEmail studentId={student._id} initialEmail={correction.suggestedEmail} />}
+      {correction && !correction.needsClientEmail && !correction.sentBack && correction.deliveryStatus === "pending" && !correction.resentAt && (
+        <p className="flex items-center gap-1.5 text-xs text-sky-400">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending to finance…
+        </p>
       )}
       {correction && !correction.sentBack && correction.resentAt && (
         <p className="flex items-center gap-1.5 text-xs text-sky-400">

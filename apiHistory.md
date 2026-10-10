@@ -1419,3 +1419,13 @@ devices", rejects with its reason); `showLocalTestNotification()` — the servic
 
 | `useTeamAttendance(teamId, enabled)` | GET `/teams/:id/attendance` | `["teams", teamId, "attendance"]`, refetch 60 s | TeamSettingsTab (2026-10-10) |
 | `useMyBreak()` / `useSetBreak()` | GET / POST `/break` | `["break"]` | BreakButton in Header (2026-10-10) |
+
+## The client's email (added 2026-10-10)
+
+- `useAddEnrolmentEmail()` → `POST /students/:id/enrolment/email` `{ email }` → invalidates `["enrolments"]`,
+  `["students"]`, `["leads"]`; toasts the server's message.
+- `useCreateStudent` — `email` is required by the server now; also invalidates `["leads"]` (the close may give the lead
+  its email).
+- `Handover.needsEmail?` (enrolment list and page); `EnrolmentCorrectionStart.needsEmail?` / `handoverStatus?`;
+  `useEnrolmentCorrection` polls every 3 s while `handoverStatus` is "pending".
+- `EMAIL_RE` exported from `types/student.ts`.

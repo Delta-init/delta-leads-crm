@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { User } from "@/types";
 import type { Course } from "@/types/course";
 import type { Team } from "@/types/team";
@@ -58,6 +59,19 @@ export type Academy = (typeof ACADEMIES)[number];
 export const ACADEMY_LABELS: Record<Academy, string> = { dubai: "Dubai", bangalore: "Bangalore" };
 /** An enrolment's academy — Dubai when it has none (everything from before the choice). */
 export const academyOf = (v: unknown): Academy => (v === "bangalore" ? "bangalore" : "dubai");
+
+/**
+ * Whether finance will take this as the client's email (2026-10-10).
+ *
+ * Finance's intake checks `customer.email` with zod's `z.string().email()` —
+ * this app's zod is the same version — and refuses the whole enrolment
+ * otherwise. The server makes the same check at the close, at a correction
+ * and when an email is added to a close finance refused, so the forms ask
+ * exactly that rather than a looser "x@y.z", which let through addresses
+ * finance turns away.
+ */
+const FINANCE_EMAIL = z.string().email();
+export const isFinanceEmail = (v: string | null | undefined): boolean => FINANCE_EMAIL.safeParse((v ?? "").trim()).success;
 
 export interface StudentFilters {
   search?: string;

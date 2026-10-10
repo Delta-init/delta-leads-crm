@@ -1095,3 +1095,14 @@ A new close starts "Bonus given?" at yes with the course's bonus, marked "From t
 - `CorrectEnrolmentDialog` — academy badge (read only), ₹, Bangalore price on course change, AED payments restored.
 - `MapCourseDialog` — Bangalore section (price, Bangalore finance product, LMS courses).
 - `lib/currency` — `fmtINR`, `fmtAED`, `fmtAcademy(n, academy)`.
+
+### Change log — 2026-10-10 (the client's email)
+- `AddEnrolmentEmail` (new, `components/students/`) — "Add the client's email and send again": an email field (checked
+  with `EMAIL_RE`) and Send again (`useAddEnrolmentEmail`); after saving, "Email added — sending to finance…". Props
+  `studentId`, `initialEmail?`, `className?`. Mounted only when the server says `needsEmail`: on My Enrolments cards
+  (instead of the "Could not reach finance" line and "Generate invoice"), the enrolment page header and the student page
+  — for whoever has `enrolments:edit` (others see a plain line on the first two).
+- `CreateStudentModal` — asks for the client's email in the details strip when the lead has none that works (or one
+  finance won't take), required for a new close; sent as `email`.
+- `CorrectEnrolmentDialog` — `EMAIL_RE` now from `types/student`.
+- Enrolment page and student page — "Sending to finance…" while a first send is on its way.

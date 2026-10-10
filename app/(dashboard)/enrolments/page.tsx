@@ -15,6 +15,8 @@ import { AcademyBadge } from "@/components/students/AcademyBadge";
 import { useMyEnrolments, useRequestInvoice, sendBackState, uaeTime, type Enrolment } from "@/hooks/useEnrolments";
 import { EnrolmentStepsStrip } from "@/components/students/EnrolmentSteps";
 import { CorrectEnrolmentDialog } from "@/components/students/CorrectEnrolmentDialog";
+import { AddEnrolmentEmail } from "@/components/students/AddEnrolmentEmail";
+import { useAuthStore } from "@/lib/store/authStore";
 import type { Course } from "@/types/course";
 
 /**
@@ -45,6 +47,8 @@ export default function EnrolmentsPage() {
     ...(tab === "returned" ? { state: "returned" } : {}),
   });
   const invoiceMut = useRequestInvoice();
+  // Giving a close finance refused its email is for whoever may act on enrolments, as sending one again is.
+  const mayAct = useAuthStore().hasPermission("enrolments", "edit");
   /** The sent-back enrolment being corrected, if any. */
   const [correcting, setCorrecting] = useState<string | null>(null);
 
@@ -160,6 +164,7 @@ export default function EnrolmentsPage() {
               onGenerate={() => invoiceMut.mutate(e._id)}
               onCorrect={() => setCorrecting(e._id)}
               generating={invoiceMut.isPending && invoiceMut.variables === e._id}
+              mayAct={mayAct}
             />
           ))}
         </div>
@@ -205,8 +210,8 @@ function Stat({ icon: Icon, label, value, tone }: {
   );
 }
 
-function EnrolmentRow({ enrolment: e, onGenerate, onCorrect, generating }: {
-  enrolment: Enrolment; onGenerate: () => void; onCorrect: () => void; generating: boolean;
+function EnrolmentRow({ enrolment: e, onGenerate, onCorrect, generating, mayAct }: {
+  enrolment: Enrolment; onGenerate: () => void; onCorrect: () => void; generating: boolean; mayAct: boolean;
 }) {
   const course = e.course && typeof e.course === "object" ? (e.course as Course) : null;
   const inv = e.invoice;
@@ -270,7 +275,17 @@ function EnrolmentRow({ enrolment: e, onGenerate, onCorrect, generating }: {
             </div>
           )}
 
-          {h?.status === "failed" && (
+          {/* Refused for the client's email: asked for here, and sent again as the same enrolment. */}
+          {h?.needsClientEmail && (mayAct
+            ? <AddEnrolmentEmail studentId={e._id} initialEmail={h?.suggestedEmail} className="mt-2" />
+            : (
+              <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 px-2.5 py-1.5">
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400" />
+                <p className="text-[11px] text-amber-300">Finance refused it: the client&apos;s email is missing or isn&apos;t one it takes.</p>
+              </div>
+            ))}
+
+          {h?.status === "failed" && !h.needsClientEmail && (
             <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1.5">
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-red-400" />
               <p className="text-[11px] text-red-300">
@@ -311,6 +326,9 @@ function EnrolmentRow({ enrolment: e, onGenerate, onCorrect, generating }: {
                 {inv.currency} {(inv.totalMinor / 100).toFixed(2)}
               </p>
             </div>
+          ) : h?.needsClientEmail ? (
+            // "Generate invoice" would send the same refused snapshot: the email box on the left is the way on.
+            <span className="text-[11px] text-amber-400">Needs the client&apos;s email</span>
           ) : h?.status === "pending" ? (
             <span className="text-[11px] text-muted-foreground">Sending…</span>
           ) : (

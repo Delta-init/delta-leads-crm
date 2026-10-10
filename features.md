@@ -783,3 +783,18 @@ or its own); the course card shows the Bangalore price.
 ## Live split by HRMS attendance (2026-10-10)
 
 Team → Settings: **Split by HRMS Attendance** switch (shown with auto-split on) and each member's state now — clocked in, on break, clocked out, on leave, not in HRMS — refreshed every minute (`useTeamAttendance`). Header: **Take break** / **On break · 12 min — End** (`BreakButton`, `useMyBreak` / `useSetBreak`).
+
+## The client's email at the close, and closes stuck without one (2026-10-10)
+
+**What it does**: Finance refuses an enrolment without the client's email, and 21 closes from 8 Sep sat failed for it
+("Request validation failed"). The close dialog (every way of closing: the status menu, the lead page, a card dropped on
+Closed, several at once, a team's page) now asks for the client's email when the lead has none that works — "Email *"
+in the details strip, as Draw's does — and blocks saving until it is one finance will take ("Still needed: the client's
+email"). The server refuses a close without it too, and keeps it on the lead (logged in its history).
+A close finance already refused for the email shows **"Add the client's email and send again"** — an email field and
+**Send again** — on its My Enrolments card, its enrolment page and its student page (for whoever may act on enrolments);
+saved, it goes to finance at once as the same enrolment and the card shows it sending, then its invoice. "Generate
+invoice" is not offered for such a row. A row failed for any other reason shows no email box.
+
+**API**: `POST /students` `email` (required); `POST /students/:id/enrolment/email` `{ email }`; `handover.needsEmail` on
+the enrolment list and page; `needsEmail` / `handoverStatus` on `GET /students/:id/correction`.

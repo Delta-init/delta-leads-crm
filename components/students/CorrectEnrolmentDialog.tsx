@@ -19,7 +19,7 @@ import { PaymentRowsEditor, missingInRows, newPaymentRow, rowAmount, rowOriginal
 import { AcademyBadge } from "@/components/students/AcademyBadge";
 import { bangalorePriceOf, type Course } from "@/types/course";
 import type { FeeStatus, Student, StudentPayment } from "@/types/student";
-import { ENROLMENT_LANGUAGES, academyOf } from "@/types/student";
+import { ENROLMENT_LANGUAGES, academyOf, isFinanceEmail } from "@/types/student";
 
 /*
  * Correcting an enrolment finance sent back (the user, 2026-10-05: "if send it
@@ -32,8 +32,6 @@ import { ENROLMENT_LANGUAGES, academyOf } from "@/types/student";
  * server.
  */
 
-/** The shape finance accepts for the client's email — it refuses an enrolment without one. */
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** A Select can't hold "" — this stands for "nobody" / "no team". */
 const NONE = "__none__";
 
@@ -175,7 +173,7 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
   const missing = [
     !name.trim() && "the client's name",
     !phone.trim() && "the client's phone",
-    !EMAIL_RE.test(email.trim()) && "the client's email",
+    !isFinanceEmail(email) && "the client's email",
     !courseId && "a course",
     bangalorePriceMissing && "the course's Bangalore price (Courses → Map)",
     !feeOk && "the fee",
@@ -277,7 +275,7 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-8 text-xs" aria-label="Client email" />
             </div>
           </div>
-          {email.trim() !== "" && !EMAIL_RE.test(email.trim()) && (
+          {email.trim() !== "" && !isFinanceEmail(email) && (
             <p className="text-[10px] text-amber-400">Finance needs a working email to invoice the client.</p>
           )}
         </section>

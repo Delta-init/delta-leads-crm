@@ -15,6 +15,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { useEnrolment, useRequestInvoice, sendBackState, uaeTime, type EnrolmentDetail } from "@/hooks/useEnrolments";
 import { EnrolmentStepsList } from "@/components/students/EnrolmentSteps";
 import { CorrectEnrolmentDialog } from "@/components/students/CorrectEnrolmentDialog";
+import { AddEnrolmentEmail } from "@/components/students/AddEnrolmentEmail";
 import type { Course } from "@/types/course";
 
 /**
@@ -107,6 +108,21 @@ function Header({ e }: { e: EnrolmentDetail }) {
             </div>
           )}
         </div>
+      )}
+      {/* Refused by finance for the client's email: asked for here, and sent again as the same enrolment. */}
+      {h?.needsClientEmail && (mayAct
+        ? <AddEnrolmentEmail studentId={e._id} initialEmail={h?.suggestedEmail} className="mt-4" />
+        : (
+          <p className="mt-4 flex items-start gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Finance refused it: the client&apos;s email is missing or isn&apos;t one it takes.
+          </p>
+        ))}
+      {/* On its way to finance — the first time, or again once given its email. */}
+      {!h?.needsClientEmail && h?.status === "pending" && !h.resentAt && !e.invoice && (
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending to finance…
+        </p>
       )}
       {(resending || sentAgain) && h?.resentAt && (
         <p className="mt-3 flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400">
