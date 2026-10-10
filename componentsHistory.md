@@ -1085,3 +1085,13 @@ A new close starts "Bonus given?" at yes with the course's bonus, marked "From t
 - `components/commission/SlabsCard` (new) — the slabs on Commission → Plan; Super Admin editing (add / remove levels, the
   base row's target fixed at 0, checks before save).
 - `app/(dashboard)/my-pay/page.tsx` (new) — My Pay; sidebar item "My Pay" (no permModule, like Commission).
+
+### Change log — 2026-10-10 (academy at the close)
+- `AcademyBadge` (new, `components/students/`) — Dubai / Bangalore pill.
+- `PaymentRowsEditor` — `academy` prop; Bangalore: ₹ amounts, "Paid in AED" (AED + rate), the lead's own money at a rate.
+  `rowAmount(r, academy)`, `missingInRows(rows, academy)`, new `rowAed`, `rowOriginal`.
+- `CreateStudentModal` — the academy selector (only when the server offers Bangalore; read only when editing a Bangalore
+  enrolment), Bangalore price / ₹, no lead payments for Bangalore.
+- `CorrectEnrolmentDialog` — academy badge (read only), ₹, Bangalore price on course change, AED payments restored.
+- `MapCourseDialog` — Bangalore section (price, Bangalore finance product, LMS courses).
+- `lib/currency` — `fmtINR`, `fmtAED`, `fmtAcademy(n, academy)`.

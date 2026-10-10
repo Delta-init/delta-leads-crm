@@ -16,15 +16,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCourses } from "@/hooks/useCourses";
+import { useAcademies, useCourses } from "@/hooks/useCourses";
 import { CourseDialog } from "@/components/courses/CourseDialog";
 import { DeleteCourseDialog } from "@/components/courses/DeleteCourseDialog";
 import type { Course } from "@/types/course";
-import { lmsCoursesOf } from "@/types/course";
+import { bangalorePriceOf, lmsCoursesOf } from "@/types/course";
 import { useCurrencyStore } from "@/lib/store/currencyStore";
 import Link from "next/link";
 import { TL_PAID, usd } from "@/lib/commission";
-import { fmtCurrency, fmtUSD } from "@/lib/currency";
+import { fmtCurrency, fmtINR, fmtUSD } from "@/lib/currency";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -63,6 +63,8 @@ interface CourseCardProps {
 
 function CourseCard({ course, onEdit, onDelete, onMap, index }: CourseCardProps) {
   const lmsCount = lmsCoursesOf(course).length;
+  // Only where the server keeps a course's Bangalore side (cached, one call for the page).
+  const bangaloreKept = useAcademies().data?.supported === true;
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -140,6 +142,16 @@ function CourseCard({ course, onEdit, onDelete, onMap, index }: CourseCardProps)
             >
               {lmsCount ? `LMS: ${lmsCount} course${lmsCount === 1 ? "" : "s"}` : "LMS not mapped"}
             </span>
+            {/* Its Bangalore price: without one it can't be closed for Bangalore. */}
+            {bangaloreKept && <span
+              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+                bangalorePriceOf(course)
+                  ? "border-orange-500/30 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10 dark:text-orange-400"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {bangalorePriceOf(course) ? `Bangalore ${fmtINR(bangalorePriceOf(course))}` : "No Bangalore price"}
+            </span>}
           </button>
 
           {/* What selling it pays, from the Commission plan — where it is

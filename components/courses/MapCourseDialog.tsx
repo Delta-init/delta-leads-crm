@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Link2, Sparkles, Loader2, AlertTriangle } from "lucide-react";
+import { Link2, Sparkles, Loader2, AlertTriangle, MapPin } from "lucide-react";
 import type { Course, LmsCourse } from "@/types/course";
 import { lmsCoursesOf } from "@/types/course";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -13,7 +14,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useFinanceItems, useLmsCourses, useMapCourse, type FinanceItem } from "@/hooks/useCourses";
+import { useAcademies, useFinanceItems, useLmsCourses, useMapCourse, type FinanceItem } from "@/hooks/useCourses";
 
 /** Radix reads "" as unset, so "not mapped" needs a value of its own. */
 const NONE = "__none__";
@@ -35,6 +36,12 @@ const normalise = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, "");
  * A same-name match is offered, never applied: "Digital Marketing" and
  * "Digital Marketing (Evening)" are one course to a comparison and two to
  * anybody reading them.
+ *
+ *   Bangalore academy (the user, 2026-10-10) — how a close made for Bangalore
+ *   sells it: its price in rupees (without one it cannot be closed for
+ *   Bangalore), its product in finance's Bangalore organization, and its LMS
+ *   courses — the same as Dubai's unless said otherwise, since the Forex
+ *   courses are shared between the academies.
  */
 export function MapCourseDialog({
   course,
@@ -46,15 +53,29 @@ export function MapCourseDialog({
   onClose: () => void;
 }) {
   const items = useFinanceItems(open);
+  // The Bangalore side only where the server keeps it — an older one would drop it unsaid.
+  const academies = useAcademies(open);
+  const bangaloreKept = academies.data?.supported === true;
+  const bangaloreItems = useFinanceItems(open && bangaloreKept, "bangalore");
   const lms = useLmsCourses(open);
   const save = useMapCourse();
   const [itemId, setItemId] = useState<string>(NONE);
   const [slugs, setSlugs] = useState<string[]>([]);
+  // Bangalore: INR price, its finance product, and its LMS courses (none = Dubai's).
+  const [bPrice, setBPrice] = useState("");
+  const [bItemId, setBItemId] = useState<string>(NONE);
+  const [bSameLms, setBSameLms] = useState(true);
+  const [bSlugs, setBSlugs] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open || !course) return;
     setItemId(course.financeItemId || NONE);
     setSlugs(lmsCoursesOf(course));
+    const b = course.bangalore;
+    setBPrice(b?.price ? String(b.price) : "");
+    setBItemId(b?.financeItemId || NONE);
+    setBSameLms(!(b?.lmsCourseSlugs?.length));
+    setBSlugs(b?.lmsCourseSlugs ?? []);
   }, [open, course]);
 
   const itemSuggestion = useMemo<FinanceItem | undefined>(
@@ -74,9 +95,28 @@ export function MapCourseDialog({
   const toggle = (slug: string, on: boolean) =>
     setSlugs((current) => (on ? (current.includes(slug) ? current : [...current, slug]) : current.filter((s) => s !== slug)));
   const bundleWithProduct = itemId !== NONE && slugs.length > 1;
+  const bToggle = (slug: string, on: boolean) =>
+    setBSlugs((current) => (on ? (current.includes(slug) ? current : [...current, slug]) : current.filter((s) => s !== slug)));
+  const bangaloreOff = !bangaloreItems.isLoading && !bangaloreItems.isError && (bangaloreItems.data?.length ?? 0) === 0;
+  /** Blank clears the price; anything else must be a number above zero. */
+  const bPriceBad = bPrice.trim() !== "" && !(Number(bPrice) > 0);
 
   async function submit() {
-    await save.mutateAsync({ id: course!._id, financeItemId: itemId === NONE ? "" : itemId, lmsCourseSlugs: slugs });
+    await save.mutateAsync({
+      id: course!._id,
+      financeItemId: itemId === NONE ? "" : itemId,
+      lmsCourseSlugs: slugs,
+      ...(bangaloreKept
+        ? {
+            bangalore: {
+              price: bPrice.trim() === "" ? null : Number(bPrice),
+              financeItemId: bItemId === NONE ? "" : bItemId,
+              // None listed opens the same as Dubai's.
+              lmsCourseSlugs: bSameLms ? [] : bSlugs,
+            },
+          }
+        : {}),
+    });
     onClose();
   }
 
@@ -193,11 +233,94 @@ export function MapCourseDialog({
               </p>
             )}
           </div>
+
+          {/* ── Bangalore academy ── */}
+          {bangaloreKept && (
+          <div className="space-y-3 rounded-md border border-orange-500/20 bg-orange-500/5 p-3">
+            <div className="space-y-0.5">
+              <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-orange-500" /> Bangalore academy</Label>
+              <p className="text-xs text-muted-foreground">
+                How it is sold when a close is made for Bangalore: in rupees, billed in finance&apos;s Bangalore organization.
+                Without a price it can&apos;t be closed for Bangalore.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="bangalore-price" className="text-xs">Price (₹)</Label>
+              <Input
+                id="bangalore-price"
+                type="number" min="0" step="0.01" value={bPrice}
+                onChange={(e) => setBPrice(e.target.value)}
+                placeholder="Not set — can't be closed for Bangalore"
+              />
+              {bPriceBad && <p className="text-xs text-destructive">The price must be above zero — or leave it blank.</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Finance product (Bangalore)</Label>
+              {bangaloreItems.isError ? (
+                <p className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+                  Finance&apos;s Bangalore organization could not be read just now. Try again in a moment.
+                </p>
+              ) : bangaloreOff ? (
+                <p className="rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
+                  No Bangalore products to choose from — this server is not connected to finance&apos;s Bangalore organization
+                  (FINANCE_ORG_ID_BANGALORE), or it has none. Unmapped, the invoice line carries the course&apos;s name and fee.
+                </p>
+              ) : (
+                <Select value={bItemId} onValueChange={setBItemId} disabled={bangaloreItems.isLoading}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={bangaloreItems.isLoading ? "Loading…" : "Not mapped"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Not mapped</SelectItem>
+                    {(bangaloreItems.data ?? []).map((i) => (
+                      <SelectItem key={i.id} value={i.id}>
+                        {i.name}{i.sku ? ` · ${i.sku}` : ""} · ₹{(i.unitPriceMinor / 100).toLocaleString("en-IN")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">LMS course(s) (Bangalore)</Label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <Checkbox checked={bSameLms} onCheckedChange={(v) => setBSameLms(v === true)} />
+                <span>Same as Dubai{slugs.length ? ` — ${slugs.map(titleOf).join(" + ")}` : ""}</span>
+              </label>
+              {!bSameLms && (
+                lms.isLoading ? (
+                  <p className="flex items-center gap-2 py-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</p>
+                ) : (
+                  <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-border bg-background p-2">
+                    {(lms.data ?? []).map((c) => {
+                      const at = bSlugs.indexOf(c.slug);
+                      return (
+                        <label key={c.slug} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+                          <Checkbox checked={at >= 0} onCheckedChange={(v) => bToggle(c.slug, v === true)} />
+                          <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                          {at >= 0 && bSlugs.length > 1 && (
+                            <span className="shrink-0 rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">{at + 1}</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )
+              )}
+              {!bSameLms && bSlugs.length === 0 && (
+                <p className="text-xs text-muted-foreground">None ticked opens the same as Dubai.</p>
+              )}
+            </div>
+          </div>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit} disabled={save.isPending}>
+          <Button onClick={submit} disabled={save.isPending || (bangaloreKept && bPriceBad)}>
             {save.isPending ? "Saving…" : "Save mapping"}
           </Button>
         </DialogFooter>

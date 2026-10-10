@@ -42,9 +42,22 @@ export interface Student {
   hasBonus?: boolean | null;
   /** The bonus, in the fee's currency; 0 when none. Never part of the balance. */
   bonusAmount?: number;
+  /** Which academy it was closed for — its fee and payments are INR when Bangalore. Absent (Dubai) on older enrolments. */
+  academy?: Academy;
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Which academy a close is for (the user, 2026-10-10): Dubai — as it always
+ * was — or Bangalore: INR, the course's Bangalore price, finance's Bangalore
+ * org. Chosen at the close and never changed after.
+ */
+export const ACADEMIES = ["dubai", "bangalore"] as const;
+export type Academy = (typeof ACADEMIES)[number];
+export const ACADEMY_LABELS: Record<Academy, string> = { dubai: "Dubai", bangalore: "Bangalore" };
+/** An enrolment's academy — Dubai when it has none (everything from before the choice). */
+export const academyOf = (v: unknown): Academy => (v === "bangalore" ? "bangalore" : "dubai");
 
 export interface StudentFilters {
   search?: string;
@@ -92,6 +105,8 @@ export interface CreateStudentInput {
   payments?: StudentPayment[];
   hasBonus?: boolean;
   bonusAmount?: number;
+  /** Dubai (the default) or Bangalore. */
+  academy?: Academy;
 }
 
 /**
@@ -143,4 +158,14 @@ export interface StudentPayment {
   paidAt: string;
   /** The money already on the lead before the close, as one payment. */
   collectedBefore?: boolean;
+  /** A Bangalore close's payment taken in AED: the AED and its rate (INR for 1 AED); `amount` is the INR it came to. */
+  original?: PaymentOriginal;
+}
+
+/** A payment taken in AED on a Bangalore close. */
+export interface PaymentOriginal {
+  currency: "AED";
+  amount: number;
+  /** INR for 1 AED. */
+  rate: number;
 }

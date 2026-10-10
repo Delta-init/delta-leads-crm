@@ -1404,3 +1404,15 @@ devices", rejects with its reason); `showLocalTestNotification()` — the servic
 
 **Types:** `SlabRow`, `Slabs`, `SlabLevel`, `PayRow`, `PayView` in `types/commission.ts`; `payMonths()`, `PAY_FROM_MONTH`,
 `aedShort()` in `lib/commission.ts`.
+
+## Academy at the close (added 2026-10-10)
+
+- `useAcademies(enabled)` → `GET /courses/academies` → `{ supported, academies }` · key `["academies"]` · no retry; any error
+  (an API without the route) → `{ supported: false, academies: ["dubai"] }`. The close dialog shows the academy choice only
+  when `academies` has "bangalore"; Map / the course card show the Bangalore side when `supported`.
+- `useCreateStudent` sends `academy` and each payment's `original: { currency: "AED", amount, rate }` (Bangalore).
+- `useCorrectEnrolment` payments carry `original`; the academy is not sent (it can't change).
+- `useFinanceItems(enabled, academy)` → `GET /courses/finance-items?academy=bangalore` · key `["finance-items", academy]`.
+- `useMapCourse` sends `bangalore: { price, financeItemId, lmsCourseSlugs }`.
+- Types: `Academy`, `ACADEMIES`, `ACADEMY_LABELS`, `academyOf`, `PaymentOriginal` (types/student.ts); `CourseBangalore`,
+  `bangalorePriceOf` (types/course.ts).

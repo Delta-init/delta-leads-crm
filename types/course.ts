@@ -17,10 +17,29 @@ export interface Course {
   hsnSac?: string;
   /** What selling it earns (AED per approved sale) — set on the Commission plan. */
   commission?: CoursePlan;
+  /** How the Bangalore academy sells it — set on the mapping ("Map"). */
+  bangalore?: CourseBangalore;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * A course as the Bangalore academy sells it: its INR price (a Bangalore close
+ * is refused without one), its item in finance's Bangalore org, and its LMS
+ * courses — none listed opens the same as Dubai's.
+ */
+export interface CourseBangalore {
+  price?: number | null;
+  financeItemId?: string | null;
+  lmsCourseSlugs?: string[];
+}
+
+/** The INR price a Bangalore close starts from; 0 when the course has none. */
+export const bangalorePriceOf = (course?: Pick<Course, "bangalore"> | null): number => {
+  const p = Number(course?.bangalore?.price ?? 0);
+  return Number.isFinite(p) && p > 0 ? p : 0;
+};
 
 export interface CourseFilters {
   search?: string;

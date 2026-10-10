@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/toast";
 import api from "@/lib/axios";
 import type { ApiResponse } from "@/types";
-import type { Course, CourseFilters, LmsCourse } from "@/types/course";
+import type { Course, CourseBangalore, CourseFilters, LmsCourse } from "@/types/course";
 
 const COURSES_KEY = ["courses"] as const;
 
@@ -113,16 +113,43 @@ export interface FinanceItem {
  * secret belongs on a server, and a key shipped to a browser is a published key.
  *
  * Returns an empty list when the integration is switched off, so the screen can
- * say so plainly instead of showing an error.
+ * say so plainly instead of showing an error. `academy: "bangalore"` lists
+ * finance's Bangalore org instead — a course's Bangalore item comes from there.
  */
-export const useFinanceItems = (enabled = true) =>
+export const useFinanceItems = (enabled = true, academy: "dubai" | "bangalore" = "dubai") =>
   useQuery({
-    queryKey: ["finance-items"],
+    queryKey: ["finance-items", academy],
     queryFn: async () => {
-      const response = await api.get<ApiResponse<FinanceItem[]>>("/courses/finance-items");
+      const response = await api.get<ApiResponse<FinanceItem[]>>("/courses/finance-items", {
+        params: academy === "bangalore" ? { academy } : undefined,
+      });
       return response.data.data ?? [];
     },
     enabled,
+    staleTime: 5 * 60_000,
+  });
+
+/**
+ * Which academies a close can be made for, as the server says (the user,
+ * 2026-10-10): Dubai always, Bangalore only while the server has its finance
+ * org. `supported` is whether the server knows academies at all — a web newer
+ * than its API gets no answer, offers no choice and closes as Dubai, rather
+ * than sending rupees to a server that would keep them as Dubai's dirhams.
+ */
+export const useAcademies = (enabled = true) =>
+  useQuery({
+    queryKey: ["academies"],
+    queryFn: async (): Promise<{ supported: boolean; academies: string[] }> => {
+      try {
+        const response = await api.get<ApiResponse<{ academies?: string[] }>>("/courses/academies");
+        const academies = response.data.data?.academies;
+        return Array.isArray(academies) ? { supported: true, academies } : { supported: false, academies: ["dubai"] };
+      } catch {
+        return { supported: false, academies: ["dubai"] };
+      }
+    },
+    enabled,
+    retry: false,
     staleTime: 5 * 60_000,
   });
 
@@ -138,12 +165,18 @@ export const useLmsCourses = (enabled = true) =>
     staleTime: 5 * 60_000,
   });
 
-/** Save where a course maps: its finance product ("" to unmap) and its LMS courses, in order ([] to unmap). */
+/**
+ * Save where a course maps: its finance product ("" to unmap) and its LMS
+ * courses, in order ([] to unmap) — and how Bangalore sells it: its INR price
+ * (null clears it), its Bangalore finance item, its own LMS courses ([] = Dubai's).
+ */
 export const useMapCourse = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, financeItemId, lmsCourseSlugs }: { id: string; financeItemId: string; lmsCourseSlugs: string[] }) => {
-      const response = await api.put<ApiResponse<Course>>(`/courses/${id}`, { financeItemId, lmsCourseSlugs });
+    mutationFn: async ({ id, financeItemId, lmsCourseSlugs, bangalore }: {
+      id: string; financeItemId: string; lmsCourseSlugs: string[]; bangalore?: CourseBangalore;
+    }) => {
+      const response = await api.put<ApiResponse<Course>>(`/courses/${id}`, { financeItemId, lmsCourseSlugs, ...(bangalore ? { bangalore } : {}) });
       return response.data.data!;
     },
     onSuccess: () => {

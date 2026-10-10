@@ -12,13 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { fmtFull } from "@/lib/currency";
+import { fmtAcademy } from "@/lib/currency";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useCorrectEnrolment, useEnrolmentCorrection, type EnrolmentCorrectionStart } from "@/hooks/useEnrolments";
-import { PaymentRowsEditor, missingInRows, newPaymentRow, rowAmount, type PaymentRow } from "@/components/students/PaymentRowsEditor";
-import type { Course } from "@/types/course";
-import type { FeeStatus, Student } from "@/types/student";
-import { ENROLMENT_LANGUAGES } from "@/types/student";
+import { PaymentRowsEditor, missingInRows, newPaymentRow, rowAmount, rowOriginal, type PaymentRow } from "@/components/students/PaymentRowsEditor";
+import { AcademyBadge } from "@/components/students/AcademyBadge";
+import { bangalorePriceOf, type Course } from "@/types/course";
+import type { FeeStatus, Student, StudentPayment } from "@/types/student";
+import { ENROLMENT_LANGUAGES, academyOf } from "@/types/student";
 
 /*
  * Correcting an enrolment finance sent back (the user, 2026-10-05: "if send it
@@ -44,18 +45,25 @@ const nameOf = (v: unknown) => (v && typeof v === "object" ? (v as { name?: stri
  * first — at what it comes to now, with the method and receipt the close gave
  * it — then each payment taken at the close. An enrolment from before
  * payments were listed starts from its one method, one receipt and the rest of
- * what was paid.
+ * what was paid. A Bangalore one's payments taken in AED start as they were:
+ * the dirhams and the rate; the lead's own money (AED) with the rate it had.
  */
 function startingRows(s: Student, ownOnLead: number): PaymentRow[] {
   const listed = s.payments ?? [];
   const ownWas = listed.find((p) => p.collectedBefore);
   const rows: PaymentRow[] = [];
+  const rate = (p?: StudentPayment) => (p?.original?.rate ? String(p.original.rate) : "");
   if (ownOnLead > 0) {
-    rows.push(newPaymentRow({ collectedBefore: true, amountInput: String(ownOnLead), method: ownWas?.method ?? "", receipt: ownWas?.receipt ?? null }));
+    rows.push(newPaymentRow({ collectedBefore: true, amountInput: String(ownOnLead), method: ownWas?.method ?? "", receipt: ownWas?.receipt ?? null, rateInput: rate(ownWas) }));
   }
   const taken = listed.filter((p) => !p.collectedBefore);
   if (taken.length) {
-    rows.push(...taken.map((p) => newPaymentRow({ method: p.method, amountInput: String(p.amount), receipt: p.receipt ?? null })));
+    rows.push(...taken.map((p) => newPaymentRow({
+      method: p.method,
+      amountInput: String(p.amount),
+      receipt: p.receipt ?? null,
+      ...(p.original ? { paidInAed: true, aedInput: String(p.original.amount), rateInput: rate(p) } : {}),
+    })));
   } else if (!listed.length) {
     const rest = Math.round(((s.paidAmount ?? 0) - ownOnLead) * 100) / 100;
     if (rest > 0) rows.push(newPaymentRow({ method: s.paymentMethod ?? "", amountInput: String(rest), receipt: s.paymentReceipt ?? null }));
@@ -108,6 +116,11 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
   const { data: courses = [], isLoading: coursesLoading } = useAllCourses();
   const correct = useCorrectEnrolment();
 
+  // The academy of the close — shown, never changed: its org holds the invoice.
+  const academy = academyOf(s.academy);
+  const bangalore = academy === "bangalore";
+  const money = (n: number) => fmtAcademy(n, academy);
+
   // The client
   const [name, setName] = useState(s.name ?? "");
   const [phone, setPhone] = useState(s.phone ?? "");
@@ -123,7 +136,7 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
 
   // Each payment, with its receipt; the lead's own money first, its amount fixed.
   const [paymentRows, setPaymentRows] = useState<PaymentRow[]>(() => startingRows(s, start.ownOnLead));
-  const paidAmount = paymentRows.reduce((t, r) => t + rowAmount(r), 0);
+  const paidAmount = paymentRows.reduce((t, r) => t + rowAmount(r, academy), 0);
   const pending = Math.max(0, totalFee - paidAmount);
   /** Collected more than the fee: taken (the owner, 2026-10-06) and said so in amber, not refused. */
   const overFee = Math.round(paidAmount * 100) > Math.round(totalFee * 100);
@@ -155,14 +168,19 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
   const counsellors = withCurrent(start.counsellors, idOf(s.assignedTo), nameOf(s.assignedTo));
   const teams = withCurrent(start.teams, idOf(s.team), nameOf(s.team));
 
+  // A Bangalore enrolment's course needs its Bangalore price, as at the close.
+  const pickedCourse = courseOptions.find((c) => c._id === courseId);
+  const bangalorePriceMissing = bangalore && Boolean(pickedCourse) && !(bangalorePriceOf(pickedCourse) > 0);
+
   const missing = [
     !name.trim() && "the client's name",
     !phone.trim() && "the client's phone",
     !EMAIL_RE.test(email.trim()) && "the client's email",
     !courseId && "a course",
+    bangalorePriceMissing && "the course's Bangalore price (Courses → Map)",
     !feeOk && "the fee",
     !language && "language",
-    ...missingInRows(paymentRows),
+    ...missingInRows(paymentRows, academy),
     !bonusChoice && "whether a bonus was given",
     bonusAmountMissing && "the bonus amount",
   ].filter(Boolean) as string[];
@@ -185,13 +203,17 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
           paidAmount,
           notes,
           language,
-          payments: paymentRows.map((r) => ({
-            method: r.method,
-            amount: rowAmount(r),
-            receipt: r.receipt,
-            paidAt: on,
-            ...(r.collectedBefore ? { collectedBefore: true } : {}),
-          })),
+          payments: paymentRows.map((r) => {
+            const original = rowOriginal(r, academy);
+            return {
+              method: r.method,
+              amount: rowAmount(r, academy),
+              receipt: r.receipt,
+              paidAt: on,
+              ...(r.collectedBefore ? { collectedBefore: true } : {}),
+              ...(original ? { original } : {}),
+            };
+          }),
           hasBonus: bonusChoice === "yes",
           bonusAmount: bonusChoice === "yes" ? bonusAmount : 0,
         },
@@ -214,8 +236,10 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
             <DialogHeader>
               <DialogTitle className="text-base font-bold">Correct enrolment</DialogTitle>
             </DialogHeader>
-            <p className="truncate text-xs text-muted-foreground">
-              {[s.name, s.enrollmentNumber, start.invoiceNumber].filter(Boolean).join(" · ")}
+            <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="truncate">{[s.name, s.enrollmentNumber, start.invoiceNumber].filter(Boolean).join(" · ")}</span>
+              {/* Read only: a correction keeps the academy of the close. */}
+              <AcademyBadge academy={academy} className="shrink-0" />
             </p>
           </div>
         </div>
@@ -269,7 +293,9 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
                 setCourseId(v);
                 // The fee follows the course just chosen, rather than leaving the old number under a new name.
                 const c = courseOptions.find((x) => x._id === v);
-                if (c?.amount) setFeeInput(String(c.amount));
+                // In the enrolment's money: Bangalore's price, or Dubai's.
+                if (bangalore) setFeeInput(String(bangalorePriceOf(c) || ""));
+                else if (c?.amount) setFeeInput(String(c.amount));
               }}
               disabled={coursesLoading}
             >
@@ -279,29 +305,37 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
               <SelectContent>
                 {courseOptions.map((c) => (
                   <SelectItem key={c._id} value={c._id} className="text-xs">
-                    {c.name}{c.amount ? ` · ${fmtFull(c.amount)}` : ""}
+                    {c.name}
+                    {bangalore
+                      ? bangalorePriceOf(c) ? ` · ${money(bangalorePriceOf(c))}` : " · no Bangalore price"
+                      : c.amount ? ` · ${money(c.amount)}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+          {bangalorePriceMissing && (
+            <p className="text-[11px] font-medium text-amber-400">
+              {pickedCourse?.name} has no Bangalore price — set it on the Courses page (Map), or choose another course.
+            </p>
+          )}
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-2">
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-card p-2 border border-border/30">
-                <p className="text-sm font-bold text-foreground">{fmtFull(totalFee)}</p>
+                <p className="text-sm font-bold text-foreground">{money(totalFee)}</p>
                 <p className="text-[10px] text-muted-foreground">Total Fee</p>
               </div>
               <div className="rounded-lg bg-card p-2 border border-border/30">
-                <p className="text-sm font-bold text-green-400">{fmtFull(paidAmount)}</p>
+                <p className="text-sm font-bold text-green-400">{money(paidAmount)}</p>
                 <p className="text-[10px] text-muted-foreground">Paid</p>
               </div>
               <div className="rounded-lg bg-card p-2 border border-border/30">
-                <p className={cn("text-sm font-bold", pending > 0 ? "text-amber-400" : "text-green-400")}>{fmtFull(pending)}</p>
+                <p className={cn("text-sm font-bold", pending > 0 ? "text-amber-400" : "text-green-400")}>{money(pending)}</p>
                 <p className="text-[10px] text-muted-foreground">Balance</p>
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-[11px] text-muted-foreground">Total fee *</p>
+              <p className="text-[11px] text-muted-foreground">Total fee{bangalore ? " (₹)" : ""} *</p>
               <Input
                 type="number" min="0" step="0.01" value={feeInput}
                 onChange={(e) => setFeeInput(e.target.value)}
@@ -310,7 +344,7 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
             </div>
             {overFee && (
               <p className="text-[11px] font-medium text-amber-400">
-                Collected ({fmtFull(paidAmount)}) is {fmtFull(overBy)} more than the fee ({fmtFull(totalFee)}) — fine if it was taken: it goes to finance as collected.
+                Collected ({money(paidAmount)}) is {money(overBy)} more than the fee ({money(totalFee)}) — fine if it was taken: it goes to finance as collected.
               </p>
             )}
           </div>
@@ -321,7 +355,7 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
           <p className="text-xs text-muted-foreground">
             Payments * <span className="text-[10px]">— one for each way the client paid, each with its receipt</span>
           </p>
-          <PaymentRowsEditor leadId={idOf(s.leadId)} rows={paymentRows} onChange={setPaymentRows} />
+          <PaymentRowsEditor leadId={idOf(s.leadId)} rows={paymentRows} onChange={setPaymentRows} academy={academy} />
           {paymentRows.some((r) => r.collectedBefore) && (
             <p className="text-[10px] text-muted-foreground">
               The amount already on the lead is what its own payments come to — change those on the lead, then open this again.
@@ -454,7 +488,7 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
           {missing.length
             ? `Still needed: ${missing.join(", ")}.`
             : overFee
-              ? `Collected is ${fmtFull(overBy)} more than the fee — it goes to finance as collected.`
+              ? `Collected is ${money(overBy)} more than the fee — it goes to finance as collected.`
               : "Saved, and sent to finance again in the same step."}
         </span>
         <Button

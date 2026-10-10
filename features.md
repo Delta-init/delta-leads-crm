@@ -763,3 +763,19 @@ steps line and the enrolment's page say the same (the user: "if send again show 
 finance are looked at again every few seconds rather than every thirty.
 
 **API**: `GET /students/:id/correction`, `PUT /students/:id/correction`; `handover.resentAt` / `resends` on the lists.
+
+## Academy at the close: Dubai or Bangalore (2026-10-10)
+
+**What it does**: The close dialog has "Academy: Dubai / Bangalore" (default Dubai) — only when the server lists
+Bangalore (`GET /courses/academies`: its Bangalore finance org is set); otherwise, or against an API from before this
+(no such route), there is no choice and the close is Dubai's as before. The Map dialog's Bangalore section and the course
+card's Bangalore chip show whenever the server answers that route at all. Bangalore switches the fee to the
+course's Bangalore price and every amount to ₹; each payment can be ticked "Paid in AED" (AED amount + "1 AED = ₹ rate",
+its rupees worked out), and the money already on the lead (AED) always asks for its rate. A course with no Bangalore
+price can't be closed for Bangalore (said in amber, save blocked). Bangalore payments stay on the enrolment, not on the
+lead. The correction shows the academy read only and keeps the amounts in its currency. An academy badge is on the
+student page, the enrolment page and My Enrolments (Bangalore also on the students list); their amounts show in ₹.
+Courses → Map has a Bangalore section: INR price, the product from finance's Bangalore org, LMS courses (same as Dubai's
+or its own); the course card shows the Bangalore price.
+
+**API**: `POST /students` `academy`, payments' `original`; `PUT /courses/:id` `bangalore`; `GET /courses/finance-items?academy=bangalore`.

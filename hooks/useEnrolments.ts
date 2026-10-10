@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { toast } from "@/lib/toast";
-import type { StoredReceipt, Student } from "@/types/student";
+import type { PaymentOriginal, StoredReceipt, Student } from "@/types/student";
 
 const KEY = ["enrolments"] as const;
 
@@ -204,7 +204,7 @@ export interface EnrolmentCorrectionInput {
   paidAmount: number;
   notes: string;
   language: string;
-  payments: { method: string; amount: number; receipt: StoredReceipt | null; paidAt: string; collectedBefore?: boolean }[];
+  payments: { method: string; amount: number; receipt: StoredReceipt | null; paidAt: string; collectedBefore?: boolean; original?: PaymentOriginal }[];
   hasBonus: boolean;
   bonusAmount: number;
 }
