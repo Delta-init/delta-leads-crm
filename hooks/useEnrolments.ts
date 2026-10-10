@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { toast } from "@/lib/toast";
+import { EMAIL_CHECK_KEY } from "@/hooks/useStudents";
 import type { PaymentOriginal, StoredReceipt, Student } from "@/types/student";
+import { isTakenEmailMessage } from "@/types/student";
 
 const KEY = ["enrolments"] as const;
 
@@ -265,6 +267,8 @@ export const useCorrectEnrolment = () => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
         ?? "Could not save the correction";
       toast.error(msg);
+      // Refused for an email another client holds: the dialog's check asks again.
+      if (isTakenEmailMessage(msg)) qc.invalidateQueries({ queryKey: EMAIL_CHECK_KEY });
     },
   });
 };
@@ -293,6 +297,8 @@ export const useAddEnrolmentEmail = () => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
         ?? "Could not add the email";
       toast.error(msg);
+      // Refused for an email another client holds: the box's check asks again.
+      if (isTakenEmailMessage(msg)) qc.invalidateQueries({ queryKey: EMAIL_CHECK_KEY });
     },
   });
 };

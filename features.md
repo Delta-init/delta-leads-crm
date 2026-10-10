@@ -798,3 +798,16 @@ invoice" is not offered for such a row. A row failed for any other reason shows 
 
 **API**: `POST /students` `email` (required); `POST /students/:id/enrolment/email` `{ email }`; `handover.needsEmail` on
 the enrolment list and page; `needsEmail` / `handoverStatus` on `GET /students/:id/correction`.
+
+## One email, one client (2026-10-10)
+
+**What it does**: Finance files an enrolment under whichever customer already has its email, so a close, a correction or
+an added email must not use another client's address. The close dialog checks the lead's email as it opens — taken by a
+different client (another phone, or with a phone missing another name), it is treated as missing: "Email *" appears with
+"This email is already used by mohammed lebbie (STU-0021), a different client — enter Halif's own email." and the close
+waits for the client's own. The correction dialog and the "Add the client's email" box say the same as the email is typed.
+The server refuses all of these (and "Send again" of a sent-back close carrying such an email) regardless. The same
+person's second course (the same phone) is fine.
+
+**API**: `GET /students/email-check?email=&leadId=|studentId=` → `{ ok, takenBy?, message? }`; 409 with the message from
+`POST /students`, `PUT /students/:id/correction`, `POST /students/:id/enrolment/email`, `POST /students/:id/invoice`.

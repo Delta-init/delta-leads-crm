@@ -1106,3 +1106,12 @@ A new close starts "Bonus given?" at yes with the course's bonus, marked "From t
   finance won't take), required for a new close; sent as `email`.
 - `CorrectEnrolmentDialog` — `EMAIL_RE` now from `types/student`.
 - Enrolment page and student page — "Sending to finance…" while a first send is on its way.
+
+### Change log — 2026-10-10 (one email, one client)
+- `CreateStudentModal` — a lead email another client holds is treated as missing: the Email field shows with
+  "<lead email>: This email is already used by …", saving blocked until the client's own (free) email is typed
+  ("Still needed: the client's own email"); the typed email is checked too; "Checking the client's email…" while asked.
+  The lead keeps its email.
+- `CorrectEnrolmentDialog` — the same message under Email (from the check, or the server's 409); blocks saving when the
+  client's name and phone are as saved, only warns when they were changed (the server weighs those on save).
+- `AddEnrolmentEmail` — the same message, Send again disabled while the email is taken or being checked.

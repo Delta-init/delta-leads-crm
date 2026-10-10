@@ -1,10 +1,15 @@
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { toast } from "@/lib/toast";
 import type { ApiResponse } from "@/types";
-import type { Student, StudentFilters, CreateStudentInput, StoredReceipt } from "@/types/student";
+import type { Student, StudentFilters, CreateStudentInput, StoredReceipt, ClientEmailCheck } from "@/types/student";
+import { isFinanceEmail, isTakenEmailMessage } from "@/types/student";
 
 const KEY = ["students"] as const;
+
+/** Where the "is this email free for this client" answers are kept — asked again when a save is refused for one. */
+export const EMAIL_CHECK_KEY = [...KEY, "email-check"] as const;
 
 export const useStudents = (filters?: StudentFilters) =>
   useQuery({
@@ -59,9 +64,59 @@ export const useCreateStudent = () => {
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to create student";
       toast.error(msg);
+      // Refused for an email another client holds: the dialog's check asks again, and shows who.
+      if (isTakenEmailMessage(msg)) qc.invalidateQueries({ queryKey: EMAIL_CHECK_KEY });
     },
   });
 };
+
+/**
+ * Whether an email is free for this client — one email, one client
+ * (2026-10-10): asked of the server once typing pauses, for the lead being
+ * closed (`leadId`) or an enrolment (`studentId`, the correction and the
+ * add-email box). Only an email finance would take is asked about.
+ *
+ * `taken` is the server's answer when another client holds it — who, and the
+ * words to show; `checking` is true until the answer for what is typed now is
+ * in, so a form can wait for it. A server that can't answer (one from before,
+ * a network error) holds nothing up: saving is checked there regardless.
+ */
+export function useClientEmailCheck(
+  email: string,
+  of: { leadId?: string | null; studentId?: string | null },
+  enabled = true,
+): { taken: ClientEmailCheck | null; checking: boolean } {
+  const key = (email ?? "").trim().toLowerCase();
+  // The email once it has stopped changing for a moment — not a request per keystroke.
+  const [settled, setSettled] = useState(key);
+  useEffect(() => {
+    if (settled === key) return;
+    const t = setTimeout(() => setSettled(key), 400);
+    return () => clearTimeout(t);
+  }, [key, settled]);
+
+  const leadId = of.leadId ?? "";
+  const studentId = of.studentId ?? "";
+  const asks = enabled && Boolean(leadId || studentId) && isFinanceEmail(key);
+  const current = asks && settled === key;
+  const q = useQuery({
+    queryKey: [...EMAIL_CHECK_KEY, settled, leadId, studentId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ email: settled });
+      if (studentId) params.set("studentId", studentId);
+      else params.set("leadId", leadId);
+      const res = await api.get<{ success: boolean; data: ClientEmailCheck }>(`/students/email-check?${params.toString()}`);
+      return res.data.data;
+    },
+    enabled: current,
+    retry: false,
+    staleTime: 30_000,
+  });
+  return {
+    taken: current && q.data?.ok === false ? q.data : null,
+    checking: asks && (!current || q.isLoading),
+  };
+}
 
 export const useUpdateStudent = () => {
   const qc = useQueryClient();

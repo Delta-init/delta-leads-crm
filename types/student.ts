@@ -73,6 +73,25 @@ export const academyOf = (v: unknown): Academy => (v === "bangalore" ? "bangalor
 const FINANCE_EMAIL = z.string().email();
 export const isFinanceEmail = (v: string | null | undefined): boolean => FINANCE_EMAIL.safeParse((v ?? "").trim()).success;
 
+/**
+ * Whether an email is free for this client — one email, one client
+ * (2026-10-10). Finance files an enrolment under whichever customer already
+ * has its email, so the close, the correction and the add-email box refuse an
+ * address another client here holds (a different phone — or, with a phone
+ * missing, a different name). GET /students/email-check answers this; saving
+ * is checked again by the server.
+ */
+export interface ClientEmailCheck {
+  ok: boolean;
+  /** Who holds it: a student by name and code, a lead by name — never a phone. */
+  takenBy?: { name: string; code?: string; kind: "student" | "lead" };
+  /** "This email is already used by … (STU-0021), a different client — enter Halif's own email." */
+  message?: string;
+}
+
+/** The server refusing an email another client holds — its 409 says so in these words. */
+export const isTakenEmailMessage = (m: string | null | undefined): boolean => /^This email is already used by /.test(m ?? "");
+
 export interface StudentFilters {
   search?: string;
   status?: string;

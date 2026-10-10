@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { fmtAcademy, fmtUSD } from "@/lib/currency";
-import { useCreateStudent, useUpdateStudent } from "@/hooks/useStudents";
+import { useClientEmailCheck, useCreateStudent, useUpdateStudent } from "@/hooks/useStudents";
 import { useAcademies, useAllCourses } from "@/hooks/useCourses";
 import { useAddPayment } from "@/hooks/usePayments";
 import { CommissionPreview } from "@/components/commission/CommissionPreview";
@@ -164,10 +164,24 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
    */
   const leadEmail = (lead.email ?? "").trim();
   const leadEmailOk = isFinanceEmail(leadEmail);
-  const askEmail = !editing && !leadEmailOk;
+  /*
+   * One email, one client (2026-10-10): a lead's email that another client
+   * here already holds — a different phone, or with a phone missing a
+   * different name — is treated as missing. Finance files a close under
+   * whichever customer has its email, so it would be filed as them. Asked of
+   * the server as the dialog opens; the field then asks for the client's own,
+   * saying who holds the lead's. The lead keeps its email either way.
+   */
+  const leadCheck = useClientEmailCheck(leadEmailOk ? leadEmail : "", { leadId: lead._id }, open && !editing);
+  const leadEmailTaken = leadCheck.taken;
+  const askEmail = !editing && (!leadEmailOk || Boolean(leadEmailTaken));
   const [emailInput, setEmailInput] = useState(leadEmailOk ? "" : leadEmail);
-  const email = (leadEmailOk ? leadEmail : emailInput.trim()).toLowerCase();
-  const emailMissing = askEmail && !isFinanceEmail(email);
+  const email = (askEmail ? emailInput.trim() : leadEmail).toLowerCase();
+  // …and the one typed instead, asked the same way once typing pauses.
+  const typedCheck = useClientEmailCheck(askEmail ? email : "", { leadId: lead._id }, open && !editing);
+  const typedTaken = askEmail ? typedCheck.taken : null;
+  const emailChecking = !editing && ((leadEmailOk && leadCheck.checking) || (askEmail && typedCheck.checking));
+  const emailMissing = askEmail && (!isFinanceEmail(email) || Boolean(typedTaken));
 
   /*
    * Three things a close cannot be made without.
@@ -219,7 +233,7 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
     ? [bonusAmountMissing && "the bonus amount"].filter(Boolean) as string[]
     : [
         bangalorePriceMissing && "the course's Bangalore price (Courses → Map)",
-        emailMissing && "the client's email",
+        emailMissing && (typedTaken || leadEmailTaken ? "the client's own email" : "the client's email"),
         !language && "language",
         ...missingInRows(paymentRows, academy),
         !bonusChoice && "whether a bonus was given",
@@ -437,13 +451,26 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
                           aria-label="Client email"
                           autoComplete="off"
                         />
-                        <p className={cn("text-[10px]", emailMissing && emailInput.trim() ? "text-amber-400" : "text-muted-foreground")}>
-                          {emailMissing && emailInput.trim()
-                            ? "That isn't an email address finance will take."
-                            : leadEmail
-                              ? "This lead's email isn't one finance can use. Finance needs one for the invoice; it is saved on the lead too."
-                              : "This lead has no email. Finance needs one for the invoice; it is saved on the lead too."}
-                        </p>
+                        {/* Another client holds what was typed — or, nothing typed yet, the lead's own. */}
+                        {typedTaken || (leadEmailTaken && !emailInput.trim()) ? (
+                          <p className="text-[10px] text-amber-400" role="alert">
+                            {typedTaken
+                              ? typedTaken.message
+                              : <><span className="font-medium">{leadEmail}</span>: {leadEmailTaken?.message}</>}
+                          </p>
+                        ) : (
+                          <p className={cn("text-[10px]", emailMissing && emailInput.trim() ? "text-amber-400" : "text-muted-foreground")}>
+                            {emailMissing && emailInput.trim()
+                              ? "That isn't an email address finance will take."
+                              : askEmail && typedCheck.checking
+                                ? "Checking that no other client has this email…"
+                                : leadEmailTaken
+                                  ? "The lead keeps its own email; this one goes on the enrolment and to finance."
+                                  : leadEmail
+                                    ? "This lead's email isn't one finance can use. Finance needs one for the invoice; it is saved on the lead too."
+                                    : "This lead has no email. Finance needs one for the invoice; it is saved on the lead too."}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -793,17 +820,19 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
               <span className={cn("text-[11px]", !missing.length && overFee ? "text-amber-400" : "text-muted-foreground")}>
                 {missing.length
                   ? `Still needed: ${missing.join(", ")}.`
-                  : overFee
-                    ? `Collected is ${money(overBy)} more than the fee — it goes to finance as collected.`
-                    : editing
-                      ? "Changes apply to this enrolment."
-                      : "The lead is closed either way."}
+                  : emailChecking
+                    ? "Checking the client's email…"
+                    : overFee
+                      ? `Collected is ${money(overBy)} more than the fee — it goes to finance as collected.`
+                      : editing
+                        ? "Changes apply to this enrolment."
+                        : "The lead is closed either way."}
               </span>
               <Button
                 size="sm"
                 className="gap-2"
                 onClick={handleCreate}
-                disabled={saving || courseMissing || missing.length > 0 || uploading}
+                disabled={saving || courseMissing || missing.length > 0 || uploading || emailChecking}
               >
                 {saving ? (
                   <span className="flex items-center gap-1.5"><span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> {editing ? "Saving…" : "Creating…"}</span>

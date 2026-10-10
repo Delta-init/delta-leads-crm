@@ -1429,3 +1429,12 @@ devices", rejects with its reason); `showLocalTestNotification()` — the servic
 - `Handover.needsEmail?` (enrolment list and page); `EnrolmentCorrectionStart.needsEmail?` / `handoverStatus?`;
   `useEnrolmentCorrection` polls every 3 s while `handoverStatus` is "pending".
 - `EMAIL_RE` exported from `types/student.ts`.
+
+## One email, one client (added 2026-10-10)
+
+- `useClientEmailCheck(email, { leadId? | studentId? }, enabled)` → `GET /students/email-check` once typing pauses (400 ms),
+  only for an email finance takes; `["students", "email-check", email, leadId, studentId]` (`EMAIL_CHECK_KEY`), 30 s
+  stale, no retry. Returns `{ taken: ClientEmailCheck | null, checking }`; a server that can't answer blocks nothing.
+- `useCreateStudent`, `useCorrectEnrolment`, `useAddEnrolmentEmail` — a 409 "This email is already used by …"
+  (`isTakenEmailMessage`) also refreshes the email checks.
+- `types/student.ts`: `ClientEmailCheck`, `isTakenEmailMessage`.

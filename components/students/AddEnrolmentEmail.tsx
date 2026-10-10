@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAddEnrolmentEmail } from "@/hooks/useEnrolments";
+import { useClientEmailCheck } from "@/hooks/useStudents";
 import { isFinanceEmail } from "@/types/student";
 
 /**
@@ -40,6 +41,14 @@ export function AddEnrolmentEmail({ studentId, initialEmail, mayAct = true, clas
   const value = email.trim();
   const valid = isFinanceEmail(value);
   const prefilled = Boolean(value) && value === start;
+  /*
+   * One email, one client (2026-10-10): not an email another client here
+   * holds — finance would file this enrolment as them. Asked as it is typed
+   * (the server never suggests one), and refused again by the server if sent.
+   */
+  const check = useClientEmailCheck(valid ? value : "", { studentId }, mayAct);
+  const taken = check.taken;
+  const canSend = valid && !taken && !check.checking && !add.isPending;
 
   return (
     <div className={cn("rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2.5", className)}>
@@ -55,7 +64,7 @@ export function AddEnrolmentEmail({ studentId, initialEmail, mayAct = true, clas
           className="mt-2 flex flex-wrap items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (valid && !add.isPending) add.mutate({ id: studentId, email: value });
+            if (canSend) add.mutate({ id: studentId, email: value });
           }}
         >
           <Input
@@ -68,16 +77,23 @@ export function AddEnrolmentEmail({ studentId, initialEmail, mayAct = true, clas
             autoComplete="off"
             disabled={add.isPending}
           />
-          <Button type="submit" size="sm" className="h-8 gap-1.5 text-xs" disabled={!valid || add.isPending}>
+          <Button type="submit" size="sm" className="h-8 gap-1.5 text-xs" disabled={!canSend}>
             {add.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
             {add.isPending ? "Sending…" : "Add email & send again"}
           </Button>
-          <p className={cn("w-full text-[10px]", value && !valid ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
+          <p
+            className={cn("w-full text-[10px]", (value && !valid) || taken ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}
+            role={taken ? "alert" : undefined}
+          >
             {value && !valid
               ? "That isn't an email address finance will take."
-              : prefilled
-                ? "Filled in from the client's details here — check it, then send. It goes to finance at once as the same enrolment."
-                : "It goes to finance at once as the same enrolment, and the email is kept on the lead too."}
+              : taken
+                ? taken.message
+                : check.checking
+                  ? "Checking that no other client has this email…"
+                  : prefilled
+                    ? "Filled in from the client's details here — check it, then send. It goes to finance at once as the same enrolment."
+                    : "It goes to finance at once as the same enrolment, and the email is kept on the lead too."}
           </p>
         </form>
       )}

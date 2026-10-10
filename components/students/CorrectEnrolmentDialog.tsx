@@ -15,11 +15,12 @@ import { cn } from "@/lib/utils";
 import { fmtAcademy } from "@/lib/currency";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useCorrectEnrolment, useEnrolmentCorrection, type EnrolmentCorrectionStart } from "@/hooks/useEnrolments";
+import { useClientEmailCheck } from "@/hooks/useStudents";
 import { PaymentRowsEditor, missingInRows, newPaymentRow, rowAmount, rowOriginal, type PaymentRow } from "@/components/students/PaymentRowsEditor";
 import { AcademyBadge } from "@/components/students/AcademyBadge";
 import { bangalorePriceOf, type Course } from "@/types/course";
 import type { FeeStatus, Student, StudentPayment } from "@/types/student";
-import { ENROLMENT_LANGUAGES, academyOf, isFinanceEmail } from "@/types/student";
+import { ENROLMENT_LANGUAGES, academyOf, isFinanceEmail, isTakenEmailMessage } from "@/types/student";
 
 /*
  * Correcting an enrolment finance sent back (the user, 2026-10-05: "if send it
@@ -170,10 +171,27 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
   const pickedCourse = courseOptions.find((c) => c._id === courseId);
   const bangalorePriceMissing = bangalore && Boolean(pickedCourse) && !(bangalorePriceOf(pickedCourse) > 0);
 
+  /*
+   * One email, one client (2026-10-10): not an email another client here
+   * holds — finance corrects the customer its email names, so this one would
+   * be filed as them, and renamed. Asked as it is typed, for this client as
+   * saved; with the name or phone changed here the server weighs it when this
+   * is saved (the same phone as the holder is the same person), so then it
+   * only warns.
+   */
+  const emailCheck = useClientEmailCheck(email, { studentId });
+  const sameClient = name.trim() === (s.name ?? "").trim() && phone.trim() === (s.phone ?? "").trim();
+  const failedSave = (correct.error as { response?: { data?: { message?: string } } } | null)?.response?.data?.message;
+  // The server's own refusal, while the email it refused is still the one in the field.
+  const refusedTaken = isTakenEmailMessage(failedSave) && correct.variables?.data.email.toLowerCase() === email.trim().toLowerCase() ? failedSave : null;
+  const takenMessage = emailCheck.taken?.message ?? refusedTaken;
+  const emailTaken = sameClient && Boolean(emailCheck.taken);
+
   const missing = [
     !name.trim() && "the client's name",
     !phone.trim() && "the client's phone",
     !isFinanceEmail(email) && "the client's email",
+    isFinanceEmail(email) && emailTaken && "the client's own email",
     !courseId && "a course",
     bangalorePriceMissing && "the course's Bangalore price (Courses → Map)",
     !feeOk && "the fee",
@@ -277,6 +295,15 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
           </div>
           {email.trim() !== "" && !isFinanceEmail(email) && (
             <p className="text-[10px] text-amber-400">Finance needs a working email to invoice the client.</p>
+          )}
+          {isFinanceEmail(email) && takenMessage && (
+            <p className="text-[10px] text-amber-400" role="alert">
+              {takenMessage}
+              {!sameClient && emailCheck.taken && " (Checked against the client as saved — with the name or phone changed, saving checks it again.)"}
+            </p>
+          )}
+          {isFinanceEmail(email) && !takenMessage && emailCheck.checking && (
+            <p className="text-[10px] text-muted-foreground">Checking that no other client has this email…</p>
           )}
         </section>
 
@@ -485,15 +512,17 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
         <span className={cn("text-[11px]", !missing.length && overFee ? "text-amber-400" : "text-muted-foreground")}>
           {missing.length
             ? `Still needed: ${missing.join(", ")}.`
-            : overFee
-              ? `Collected is ${money(overBy)} more than the fee — it goes to finance as collected.`
-              : "Saved, and sent to finance again in the same step."}
+            : sameClient && emailCheck.checking
+              ? "Checking the client's email…"
+              : overFee
+                ? `Collected is ${money(overBy)} more than the fee — it goes to finance as collected.`
+                : "Saved, and sent to finance again in the same step."}
         </span>
         <Button
           size="sm"
           className="gap-2 shrink-0"
           onClick={save}
-          disabled={correct.isPending || missing.length > 0 || uploading}
+          disabled={correct.isPending || missing.length > 0 || uploading || (sameClient && emailCheck.checking)}
         >
           {correct.isPending
             ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending…</>
