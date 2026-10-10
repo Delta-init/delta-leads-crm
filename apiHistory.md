@@ -1416,3 +1416,6 @@ devices", rejects with its reason); `showLocalTestNotification()` — the servic
 - `useMapCourse` sends `bangalore: { price, financeItemId, lmsCourseSlugs }`.
 - Types: `Academy`, `ACADEMIES`, `ACADEMY_LABELS`, `academyOf`, `PaymentOriginal` (types/student.ts); `CourseBangalore`,
   `bangalorePriceOf` (types/course.ts).
+
+| `useTeamAttendance(teamId, enabled)` | GET `/teams/:id/attendance` | `["teams", teamId, "attendance"]`, refetch 60 s | TeamSettingsTab (2026-10-10) |
+| `useMyBreak()` / `useSetBreak()` | GET / POST `/break` | `["break"]` | BreakButton in Header (2026-10-10) |

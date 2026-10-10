@@ -12,6 +12,20 @@ export interface TeamSettings {
   slaMinutes?: number | null;
   sourceExclusions?: Record<string, string[]>; // userId → sources never auto-assigned to them
   availableSources?: string[];                 // distinct sources in this team's leads (GET only)
+  attendanceSplit?: boolean;                   // in the 10:00–19:00 GST shift, only members clocked in on the HRMS
+}
+
+/** Where a member is now, for the live split by HRMS attendance. */
+export type Presence = "in" | "break" | "out" | "leave" | "unknown";
+export interface TeamAttendance {
+  enabled: boolean;
+  /** Whether it is the main shift now (10:00–19:00 GST). */
+  inShift: boolean;
+  shift: { from: string; to: string; timeZone: string };
+  /** False when the HRMS is not linked or did not answer — `message` says which. */
+  available: boolean;
+  message?: string;
+  members: Record<string, { state: Presence; since: string | null; leave: { type: string; halfDay: boolean } | null }>;
 }
 
 export interface AbsentEntry {

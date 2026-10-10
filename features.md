@@ -779,3 +779,7 @@ Courses → Map has a Bangalore section: INR price, the product from finance's B
 or its own); the course card shows the Bangalore price.
 
 **API**: `POST /students` `academy`, payments' `original`; `PUT /courses/:id` `bangalore`; `GET /courses/finance-items?academy=bangalore`.
+
+## Live split by HRMS attendance (2026-10-10)
+
+Team → Settings: **Split by HRMS Attendance** switch (shown with auto-split on) and each member's state now — clocked in, on break, clocked out, on leave, not in HRMS — refreshed every minute (`useTeamAttendance`). Header: **Take break** / **On break · 12 min — End** (`BreakButton`, `useMyBreak` / `useSetBreak`).

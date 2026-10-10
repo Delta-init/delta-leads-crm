@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { motion, Reorder, useDragControls } from "framer-motion";
-import { Settings, Shuffle, Users, CheckCircle2, Loader2, RefreshCw, Info, Clock, CalendarDays, RotateCcw, Zap, GripVertical, Plus, X, Timer, Ban } from "lucide-react";
+import { Settings, Shuffle, Users, CheckCircle2, Loader2, RefreshCw, Info, Clock, CalendarDays, RotateCcw, Zap, GripVertical, Plus, X, Timer, Ban, Fingerprint } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useTeamSettings, useUpdateTeamSettings, useAutoAssignTeamLeads } from "@/hooks/useTeams";
-import type { Team } from "@/types/team";
+import { useTeamSettings, useUpdateTeamSettings, useAutoAssignTeamLeads, useTeamAttendance } from "@/hooks/useTeams";
+import type { Team, Presence } from "@/types/team";
 import type { User } from "@/types";
 import { toGstDateISO } from "@/lib/utils";
 
@@ -106,6 +106,7 @@ export function TeamSettingsTab({ teamId, team, isLeaderOrAdmin }: Props) {
   const [slaMinutes, setSlaMinutes]         = useState<number | null>(null);
   // userId → sources that must never be auto-assigned to them
   const [sourceExclusions, setSourceExclusions] = useState<Record<string, string[]>>({});
+  const [attendanceSplit, setAttendanceSplit] = useState(false);
 
   // orderedPool = the ordered list of User objects currently selected for auto-split
   const [orderedPool, setOrderedPool] = useState<User[]>([]);
@@ -135,6 +136,7 @@ export function TeamSettingsTab({ teamId, team, isLeaderOrAdmin }: Props) {
     );
     setSlaMinutes(settings.slaMinutes ?? null);
     setSourceExclusions(settings.sourceExclusions ?? {});
+    setAttendanceSplit(settings.attendanceSplit ?? false);
     // Build ordered User list from saved includedMembers order
     const savedIds = settings.includedMembers ?? [];
     if (savedIds.length > 0) {
@@ -184,6 +186,7 @@ export function TeamSettingsTab({ teamId, team, isLeaderOrAdmin }: Props) {
       roundRobinStartDate: roundRobinStartDate || null,
       slaMinutes: slaMinutes ?? null,
       sourceExclusions,
+      attendanceSplit,
     });
   }
 
@@ -379,6 +382,18 @@ export function TeamSettingsTab({ teamId, team, isLeaderOrAdmin }: Props) {
               )}
             </CardContent>
           </Card>
+        </motion.div>
+      )}
+
+      {/* Split by HRMS attendance */}
+      {autoAssign && (
+        <motion.div variants={itemVariants}>
+          <AttendanceSplitCard
+            teamId={teamId}
+            members={allMembers}
+            on={attendanceSplit}
+            onChange={isLeaderOrAdmin ? setAttendanceSplit : undefined}
+          />
         </motion.div>
       )}
 
@@ -746,5 +761,79 @@ export function TeamSettingsTab({ teamId, team, isLeaderOrAdmin }: Props) {
         </motion.div>
       )}
     </motion.div>
+  );
+}
+
+// ─── Split by HRMS attendance ────────────────────────────────────────────────
+
+const PRESENCE: Record<Presence, { label: string; cls: string }> = {
+  in:      { label: "Clocked in", cls: "bg-emerald-500/15 text-emerald-400" },
+  break:   { label: "On break",   cls: "bg-amber-500/15 text-amber-400" },
+  out:     { label: "Clocked out", cls: "bg-muted text-muted-foreground" },
+  leave:   { label: "On leave",   cls: "bg-red-500/15 text-red-400" },
+  unknown: { label: "Not in HRMS", cls: "bg-muted text-muted-foreground" },
+};
+
+/**
+ * The switch, and who is where right now: in the 10:00–19:00 GST shift new
+ * leads go only to members clocked in on the HRMS and not on a break; never to
+ * anyone on leave; nobody clocked in — the normal split, as after 19:00.
+ */
+function AttendanceSplitCard({ teamId, members, on, onChange }: {
+  teamId: string; members: User[]; on: boolean; onChange?: (v: boolean) => void;
+}) {
+  const { data, isLoading } = useTeamAttendance(teamId, on);
+  const since = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleTimeString("en-AE", { timeZone: "Asia/Dubai", hour: "2-digit", minute: "2-digit", hour12: true }) : "";
+  return (
+    <Card className="border-border/50">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
+            <Fingerprint className="h-4 w-4 text-emerald-400" />
+          </div>
+          Split by HRMS Attendance
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/20 p-4">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-medium">Only members clocked in, 10:00 AM – 7:00 PM GST</Label>
+            <p className="text-xs text-muted-foreground">
+              In the main shift new leads go only to members clocked in on the HRMS and not on a break. Nobody
+              clocked in, or after 7 PM — the normal split. Anyone on leave in the HRMS gets no leads all day.
+            </p>
+          </div>
+          <Switch checked={on} onCheckedChange={onChange} disabled={!onChange} />
+        </div>
+
+        {on && (
+          isLoading ? (
+            <p className="text-xs text-muted-foreground"><Loader2 className="mr-1.5 inline h-3 w-3 animate-spin" />Asking the HRMS…</p>
+          ) : data ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {data.inShift ? "Main shift now — leads go to the members clocked in." : "Outside the main shift — the normal split."}
+                {!data.available && <span className="ml-1 text-amber-400">{data.message ?? "The HRMS did not answer"} — the normal split until it does.</span>}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {members.map((m) => {
+                  const p = data.members[m._id];
+                  const meta = PRESENCE[p?.state ?? "unknown"];
+                  return (
+                    <span key={m._id} className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 px-2 py-1 text-xs">
+                      {m.name}
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${meta.cls}`}>
+                        {meta.label}{(p?.state === "in" || p?.state === "break") && p.since ? ` · ${since(p.since)}` : ""}
+                      </span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null
+        )}
+      </CardContent>
+    </Card>
   );
 }

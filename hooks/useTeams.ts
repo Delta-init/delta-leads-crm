@@ -7,6 +7,7 @@ import type { Lead, LeadFilters } from "@/types/lead";
 import type {
   Team, TeamFilters, TeamMemberStat, TeamAutoAssignResult,
   TeamDashboard, TeamLog, TeamUpdateItem, TeamReminderItem, TeamSettings,
+  TeamAttendance,
 } from "@/types/team";
 import type {
   RevenuePeriod,
@@ -580,6 +581,20 @@ export const useTeamSettings = (teamId: string) => {
   });
 };
 
+/** Each member now — clocked in, on a break, out, on leave — refreshed every minute. */
+export const useTeamAttendance = (teamId: string, enabled = true) => {
+  return useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "attendance"],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<TeamAttendance>>(`/teams/${teamId}/attendance`);
+      return res.data.data as TeamAttendance;
+    },
+    enabled: !!teamId && enabled,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+};
+
 export const useUpdateTeamSettings = (teamId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -592,6 +607,7 @@ export const useUpdateTeamSettings = (teamId: string) => {
       roundRobinStartDate?: string | null;
       slaMinutes?: number | null;
       sourceExclusions?: Record<string, string[]>;
+      attendanceSplit?: boolean;
     }) => {
       const res = await api.patch<ApiResponse<TeamSettings>>(`/teams/${teamId}/settings`, settings);
       return res.data.data as TeamSettings;
