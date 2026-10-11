@@ -66,7 +66,7 @@ import type {
   SourceAnalyticsItem, CampaignBreakdownItem,
 } from "@/types/reports";
 import { LEAD_STATUSES, STATUS_META as S_META } from "@/lib/statusConfig";
-import { toGstDateISO } from "@/lib/utils";
+import { toGstDateISO, gstPeriodStartISO } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -112,19 +112,16 @@ function getQuickRange(p: QuickPeriod): { from: string; to: string } {
   switch (p) {
     case "today":   return { from: today, to: today };
     case "week": {
-      const mon = new Date(now); mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-      return { from: toISO(mon), to: today };
+      return { from: gstPeriodStartISO("week"), to: today };
     }
     case "month": {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { from: toISO(first), to: today };
+      return { from: gstPeriodStartISO("month"), to: today };
     }
     case "quarter": {
-      const first = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-      return { from: toISO(first), to: today };
+      return { from: gstPeriodStartISO("quarter"), to: today };
     }
     case "year": {
-      return { from: toISO(new Date(now.getFullYear(), 0, 1)), to: today };
+      return { from: gstPeriodStartISO("year"), to: today };
     }
     default: return { from: "", to: "" };
   }

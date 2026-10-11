@@ -54,3 +54,29 @@ export function toGstDateISO(d: Date): string {
 export function gstTodayISO(): string {
   return toGstDateISO(new Date());
 }
+
+/**
+ * First day of the current week / month / quarter / year on the GST calendar,
+ * as "YYYY-MM-DD". Works from GST's date, not the device's, so a phone set to
+ * India time near midnight still gets the same range as the server counts.
+ * Weeks start Monday unless `weekStartsSunday` is set.
+ */
+export function gstPeriodStartISO(
+  period: "week" | "month" | "quarter" | "year",
+  weekStartsSunday = false,
+): string {
+  const [y, m, d] = gstTodayISO().split("-").map(Number);
+  let start: Date;
+  if (period === "week") {
+    const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = Sunday
+    const back = weekStartsSunday ? dow : (dow + 6) % 7;
+    start = new Date(Date.UTC(y, m - 1, d - back));
+  } else if (period === "month") {
+    start = new Date(Date.UTC(y, m - 1, 1));
+  } else if (period === "quarter") {
+    start = new Date(Date.UTC(y, Math.floor((m - 1) / 3) * 3, 1));
+  } else {
+    start = new Date(Date.UTC(y, 0, 1));
+  }
+  return start.toISOString().slice(0, 10); // a UTC-midnight date, so this is exact
+}

@@ -54,7 +54,7 @@ import { FollowupDetailsModal } from "@/components/leads/FollowupDetailsModal";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 import { LEAD_STATUSES, STATUS_META } from "@/lib/statusConfig";
-import { toGstDateISO } from "@/lib/utils";
+import { toGstDateISO, gstPeriodStartISO } from "@/lib/utils";
 import { SearchableMultiSelect } from "@/components/shared/SearchableSelect";
 
 // Multi-select filters are kept as comma-joined strings ("all" = none) so
@@ -1221,9 +1221,9 @@ function LeadsPageContent() {
                           const getRangeFor = (period: string) => {
                             const now = new Date(); const t = toGstDateISO(now);
                             if (period === "today") return { f: t, t };
-                            if (period === "week") { const m = new Date(now); m.setDate(now.getDate() - ((now.getDay() + 6) % 7)); return { f: toGstDateISO(m), t }; }
-                            if (period === "month") return { f: toGstDateISO(new Date(now.getFullYear(), now.getMonth(), 1)), t };
-                            return { f: toGstDateISO(new Date(now.getFullYear(), 0, 1)), t };
+                            if (period === "week") { return { f: gstPeriodStartISO("week"), t }; }
+                            if (period === "month") return { f: gstPeriodStartISO("month"), t };
+                            return { f: gstPeriodStartISO("year"), t };
                           };
                           const range = getRangeFor(p);
                           const isActive = dateFrom === range.f && dateTo === range.t;

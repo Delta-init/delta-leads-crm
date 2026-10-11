@@ -155,7 +155,7 @@ import { LEAD_STATUSES, STATUS_META as SM } from "@/lib/statusConfig";
 import type { User } from "@/types";
 import { useCurrencyStore } from "@/lib/store/currencyStore";
 import { fmtCompact, fmtFull } from "@/lib/currency";
-import { toGstDateISO } from "@/lib/utils";
+import { toGstDateISO, gstPeriodStartISO } from "@/lib/utils";
 import { usePushStatus } from "@/hooks/usePushStatus";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -334,20 +334,16 @@ function getRevRange(p: RevQuickPeriod): { from: string; to: string } {
   switch (p) {
     case "today":   return { from: today, to: today };
     case "week": {
-      const mon = new Date(now);
-      mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-      return { from: toGstDateISO(mon), to: today };
+      return { from: gstPeriodStartISO("week"), to: today };
     }
     case "month": {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { from: toGstDateISO(first), to: today };
+      return { from: gstPeriodStartISO("month"), to: today };
     }
     case "quarter": {
-      const first = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-      return { from: toGstDateISO(first), to: today };
+      return { from: gstPeriodStartISO("quarter"), to: today };
     }
     case "year":
-      return { from: toGstDateISO(new Date(now.getFullYear(), 0, 1)), to: today };
+      return { from: gstPeriodStartISO("year"), to: today };
     default: return { from: "", to: "" };
   }
 }
@@ -386,16 +382,9 @@ function RevTooltip({ active, payload, label }: {
 type DashFilterPreset = "all" | "month" | "year" | "custom";
 
 function getDashDates(preset: DashFilterPreset): { dateFrom: string; dateTo: string } {
-  const now    = new Date();
-  const pad    = (n: number) => String(n).padStart(2, "0");
-  const today  = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  if (preset === "month") {
-    const from = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
-    return { dateFrom: from, dateTo: today };
-  }
-  if (preset === "year") {
-    return { dateFrom: `${now.getFullYear()}-01-01`, dateTo: today };
-  }
+  const today = toGstDateISO(new Date());
+  if (preset === "month") return { dateFrom: gstPeriodStartISO("month"), dateTo: today };
+  if (preset === "year")  return { dateFrom: gstPeriodStartISO("year"),  dateTo: today };
   return { dateFrom: "", dateTo: "" };
 }
 
@@ -1463,9 +1452,9 @@ function LeadsTab({
                         const getRangeFor = (period: string) => {
                           const now = new Date(); const t = toGstDateISO(now);
                           if (period === "today") return { f: t, t };
-                          if (period === "week") { const m = new Date(now); m.setDate(now.getDate()-((now.getDay()+6)%7)); return { f: toGstDateISO(m), t }; }
-                          if (period === "month") return { f: toGstDateISO(new Date(now.getFullYear(),now.getMonth(),1)), t };
-                          return { f: toGstDateISO(new Date(now.getFullYear(),0,1)), t };
+                          if (period === "week") { return { f: gstPeriodStartISO("week"), t }; }
+                          if (period === "month") return { f: gstPeriodStartISO("month"), t };
+                          return { f: gstPeriodStartISO("year"), t };
                         };
                         const range = getRangeFor(p);
                         const isActive = dateFrom === range.f && dateTo === range.t;
@@ -2768,14 +2757,10 @@ function todayISO() {
   return toGstDateISO(new Date());
 }
 function weekStartISO() {
-  const d = new Date();
-  d.setDate(d.getDate() - d.getDay());
-  return toGstDateISO(d);
+  return gstPeriodStartISO("week", true); // this tab's week starts Sunday
 }
 function monthStartISO() {
-  const d = new Date();
-  d.setDate(1);
-  return toGstDateISO(d);
+  return gstPeriodStartISO("month");
 }
 
 type DatePreset = "today" | "week" | "month" | "custom";
@@ -3327,15 +3312,13 @@ function getReportRange(p: ReportPeriod): { from: string; to: string } {
   switch (p) {
     case "today": return { from: today, to: today };
     case "week": {
-      const mon = new Date(now);
-      mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-      return { from: toISODate(mon), to: today };
+      return { from: gstPeriodStartISO("week"), to: today };
     }
     case "month": {
-      return { from: toISODate(new Date(now.getFullYear(), now.getMonth(), 1)), to: today };
+      return { from: gstPeriodStartISO("month"), to: today };
     }
     case "year": {
-      return { from: toISODate(new Date(now.getFullYear(), 0, 1)), to: today };
+      return { from: gstPeriodStartISO("year"), to: today };
     }
     default: return { from: "", to: "" };
   }

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { cn } from "@/lib/utils";
 import api from "@/lib/axios";
-import { toGstDateISO } from "@/lib/utils";
+import { toGstDateISO, gstPeriodStartISO } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -38,14 +38,12 @@ function getRange(p: QuickPeriod): { from: string; to: string } {
     case "today":
       return { from: today, to: today };
     case "week": {
-      const mon = new Date(now);
-      mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-      return { from: toISO(mon), to: today };
+      return { from: gstPeriodStartISO("week"), to: today };
     }
     case "month":
-      return { from: toISO(new Date(now.getFullYear(), now.getMonth(), 1)), to: today };
+      return { from: gstPeriodStartISO("month"), to: today };
     case "year":
-      return { from: toISO(new Date(now.getFullYear(), 0, 1)), to: today };
+      return { from: gstPeriodStartISO("year"), to: today };
     default:
       return { from: "", to: "" };
   }

@@ -32,7 +32,7 @@ import type { Lead } from "@/types/lead";
 import { LEAD_STATUSES, STATUS_META, type LeadStatus } from "@/lib/statusConfig";
 import type { Team } from "@/types/team";
 import type { User } from "@/types";
-import { toGstDateISO } from "@/lib/utils";
+import { toGstDateISO, gstPeriodStartISO } from "@/lib/utils";
 
 // ─── Status options ───────────────────────────────────────────────────────────
 
@@ -85,9 +85,9 @@ function todayISO() { return toGstDateISO(new Date()); }
 function getRangeFor(period: string): { f: string; t: string } {
   const now = new Date(); const t = toGstDateISO(now);
   if (period === "today") return { f: t, t };
-  if (period === "week")  { const m = new Date(now); m.setDate(now.getDate() - ((now.getDay() + 6) % 7)); return { f: toGstDateISO(m), t }; }
-  if (period === "month") return { f: toGstDateISO(new Date(now.getFullYear(), now.getMonth(), 1)), t };
-  return { f: toGstDateISO(new Date(now.getFullYear(), 0, 1)), t };
+  if (period === "week")  { return { f: gstPeriodStartISO("week"), t }; }
+  if (period === "month") return { f: gstPeriodStartISO("month"), t };
+  return { f: gstPeriodStartISO("year"), t };
 }
 
 function getColorForIdx(idx: number) {
