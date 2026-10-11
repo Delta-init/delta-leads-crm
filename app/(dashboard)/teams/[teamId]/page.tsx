@@ -157,6 +157,7 @@ import { useCurrencyStore } from "@/lib/store/currencyStore";
 import { fmtCompact, fmtFull } from "@/lib/currency";
 import { toGstDateISO, gstPeriodStartISO } from "@/lib/utils";
 import { usePushStatus } from "@/hooks/usePushStatus";
+import { ViewAsButton } from "@/components/shared/ViewAsButton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -3492,6 +3493,7 @@ function ReportTab({ teamId }: { teamId: string }) {
                               <p className="text-[10px] text-muted-foreground truncate max-w-[110px]">{m.designation}</p>
                             )}
                           </div>
+                          <ViewAsButton userId={m.userId} name={m.name} status={m.status} role={m.role} />
                         </div>
                       </td>
 

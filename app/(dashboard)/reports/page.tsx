@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
+import { ViewAsButton } from "@/components/shared/ViewAsButton";
 import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import {
   useReportOverview,
@@ -335,6 +336,7 @@ function TeamRankRows({ team, open, onToggle, dateFrom, dateTo }: {
             <div className="flex items-center gap-2 border-l-2 border-primary/30 pl-2">
               <span className="font-medium text-foreground truncate max-w-[140px]">{m.name}</span>
               {m.designation && <span className="text-[10px] text-muted-foreground truncate max-w-[90px] hidden md:inline">{m.designation}</span>}
+              <ViewAsButton userId={m.userId} name={m.name} status={m.status} role={m.role} />
             </div>
           </td>
           <td />
@@ -699,6 +701,7 @@ function OverviewTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
                                 <p className="font-semibold text-foreground truncate max-w-[140px]">{u.name}</p>
                                 {u.designation && <p className="text-[10px] text-muted-foreground truncate max-w-[140px]">{u.designation}</p>}
                               </div>
+                              <ViewAsButton userId={u.userId} name={u.name} status={u.status} role={u.role} />
                             </div>
                           </td>
                           <td className="py-2.5 px-2 text-right font-bold tabular-nums">{u.total}</td>

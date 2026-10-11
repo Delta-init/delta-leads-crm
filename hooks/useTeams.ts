@@ -107,6 +107,8 @@ export interface TeamMemberSplitItem {
   name: string;
   email: string;
   designation?: string;
+  status?: "active" | "inactive";
+  role?: { roleName: string; isSystemRole: boolean } | null;
   rank: number;
   total: number;
   revenue: number;

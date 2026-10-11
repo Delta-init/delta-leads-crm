@@ -67,6 +67,9 @@ export interface UserRankItem {
   name:             string;
   email:            string;
   designation?:     string;
+  /** For "View as" — who the button may show for */
+  status?:          "active" | "inactive";
+  role?:            { roleName: string; isSystemRole: boolean } | null;
   total:            number;
   revenue:          number;
   pendingAmount:    number;
