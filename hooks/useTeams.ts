@@ -113,17 +113,15 @@ export interface TeamMemberSplitItem {
   conversionRate: number;
   new: number;
   assigned: number;
+  pending_response: number;
   followup: number;
   closed: number;
-  rejected: number;
-  cnc: number;
-  booking: number;
-  partialbooking: number;
-  interested: number;
-  rnr: number;
+  lost: number;
+  not_connected: number;
+  mia: number;
+  repeated: number;
   callback: number;
-  whatsapp: number;
-  student: number;
+  cnc: number;
 }
 
 export const useTeamMemberSplit = (teamId: string, dateFrom: string, dateTo: string) => {

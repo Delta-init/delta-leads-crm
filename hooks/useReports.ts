@@ -64,13 +64,15 @@ export function useReportTimeline(
 
 // ── User Rankings ─────────────────────────────────────────────────────────────
 
-export function useReportUserRankings(dateFrom: string, dateTo: string) {
+/** Pass `teamId` to rank only that team's members, on that team's leads. */
+export function useReportUserRankings(dateFrom: string, dateTo: string, teamId?: string) {
   return useQuery<UserRankItem[]>({
-    queryKey: ["reports", "users", dateFrom, dateTo],
+    queryKey: ["reports", "users", dateFrom, dateTo, teamId ?? "all"],
     queryFn: async () => {
-      const params = new URLSearchParams({ limit: "20" });
+      const params = new URLSearchParams({ limit: "50" });
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
+      if (teamId)   params.set("teamId",   teamId);
       const { data } = await api.get<ApiResponse<UserRankItem[]>>(
         `/reports/users?${params}`,
       );

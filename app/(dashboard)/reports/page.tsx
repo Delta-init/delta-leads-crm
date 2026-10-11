@@ -63,7 +63,7 @@ import { fmtCompact, fmtFull } from "@/lib/currency";
 import type {
   TimelinePeriod, LeadStatus, SplitPeriod,
   RevenuePeriod, RevenueTeamDetail, RevenueMemberItem,
-  SourceAnalyticsItem, CampaignBreakdownItem,
+  SourceAnalyticsItem, CampaignBreakdownItem, TeamRankItem,
 } from "@/types/reports";
 import { LEAD_STATUSES, STATUS_META as S_META } from "@/lib/statusConfig";
 import { toGstDateISO, gstPeriodStartISO } from "@/lib/utils";
@@ -210,6 +210,152 @@ function MiniStatusBars({ item, total }: { item: Record<string, number>; total: 
         );
       })}
     </div>
+  );
+}
+
+// ── Status-wise ranking tables ───────────────────────────────────────────────
+
+function StatusHeadCells() {
+  return (
+    <>
+      {ALL_STATUSES.map((s) => (
+        <th key={s} className={cn("pb-2 px-2 text-right font-medium whitespace-nowrap", S_META[s].text)}>{STATUS_META[s].label}</th>
+      ))}
+    </>
+  );
+}
+
+function StatusCells({ item, muted = false }: { item: Record<string, number>; muted?: boolean }) {
+  return (
+    <>
+      {ALL_STATUSES.map((s) => {
+        const v = item[s] ?? 0;
+        return (
+          <td key={s} className="py-2.5 px-2 text-right tabular-nums">
+            {v > 0
+              ? <span className={cn("font-semibold", S_META[s].text, muted && "opacity-90")}>{v}</span>
+              : <span className="text-muted-foreground/40">—</span>}
+          </td>
+        );
+      })}
+    </>
+  );
+}
+
+function ConvRate({ rate }: { rate: number }) {
+  return (
+    <span className={cn("font-semibold tabular-nums", rate >= 50 ? "text-green-500" : rate >= 25 ? "text-yellow-500" : "text-muted-foreground")}>
+      {rate}%
+    </span>
+  );
+}
+
+/** Footer row: sums of Total, every status and the money columns, plus overall Conv%. */
+function TotalsRow({ rows, lead, money }: {
+  rows: Record<string, number>[];
+  lead: React.ReactNode;
+  money: { key: string; cls: string }[];
+}) {
+  const sum = (k: string) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+  const total = sum("total");
+  const conv = total > 0 ? Math.round((sum("closed") / total) * 1000) / 10 : 0;
+  return (
+    <tr className="border-t border-border/60 bg-muted/20">
+      {lead}
+      <td className="pt-2.5 pb-1 px-2 text-right font-bold tabular-nums">{total}</td>
+      {ALL_STATUSES.map((s) => {
+        const v = sum(s);
+        return (
+          <td key={s} className="pt-2.5 pb-1 px-2 text-right tabular-nums">
+            {v > 0 ? <span className={cn("font-bold", S_META[s].text)}>{v}</span> : <span className="text-muted-foreground/40">—</span>}
+          </td>
+        );
+      })}
+      {money.map((m) => (
+        <td key={m.key} className="pt-2.5 pb-1 px-2 text-right whitespace-nowrap">
+          <span className={cn("font-bold tabular-nums", m.cls)}>{fmtCompact(sum(m.key))}</span>
+        </td>
+      ))}
+      <td className="pt-2.5 pb-1 pl-2 text-right"><ConvRate rate={conv} /></td>
+    </tr>
+  );
+}
+
+/** One team row; when open, its members (same columns) and any unassigned leads underneath. */
+function TeamRankRows({ team, open, onToggle, dateFrom, dateTo }: {
+  team: TeamRankItem;
+  open: boolean;
+  onToggle: () => void;
+  dateFrom: string;
+  dateTo: string;
+}) {
+  const members = useReportUserRankings(dateFrom, dateTo, open ? team.teamId : undefined);
+  const list = open ? members.data ?? [] : [];
+  const t = team as unknown as Record<string, number>;
+  // Leads in the team with nobody assigned: the team row minus its members
+  const unassigned: Record<string, number> = { total: team.total - list.reduce((a, m) => a + m.total, 0) };
+  for (const s of ALL_STATUSES) unassigned[s] = (t[s] ?? 0) - list.reduce((a, m) => a + ((m as unknown as Record<string, number>)[s] ?? 0), 0);
+  const colCount = 4 + ALL_STATUSES.length + 2;
+
+  return (
+    <>
+      <motion.tr
+        initial={{ opacity:0,x:10 }} animate={{ opacity:1,x:0 }} transition={{ delay:0.05*team.rank }}
+        onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+        tabIndex={0}
+        role="button"
+        aria-expanded={open}
+        className={cn("cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50", open ? "bg-primary/5" : "hover:bg-muted/30")}
+      >
+        <td className="py-2.5 pr-2"><RankBadge rank={team.rank} /></td>
+        <td className="py-2.5 pr-3">
+          <div className="flex items-center gap-1.5">
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", open ? "rotate-0 text-primary" : "-rotate-90")} />
+            <p className="font-semibold text-foreground truncate max-w-[160px]">{team.name}</p>
+          </div>
+        </td>
+        <td className="py-2.5 px-2 text-right tabular-nums text-muted-foreground">{team.memberCount}</td>
+        <td className="py-2.5 px-2 text-right font-bold tabular-nums">{team.total}</td>
+        <StatusCells item={t} />
+        <td className="py-2.5 px-2 text-right whitespace-nowrap"><span className="font-bold text-emerald-500 tabular-nums">{fullUSD(team.totalPayments ?? 0)}</span></td>
+        <td className="py-2.5 pl-2 text-right"><ConvRate rate={team.conversionRate} /></td>
+      </motion.tr>
+
+      {open && members.isLoading && (
+        <tr className="bg-primary/[0.03]"><td colSpan={colCount} className="py-2 pl-8"><Skeleton className="h-8 w-full" /></td></tr>
+      )}
+      {open && !members.isLoading && list.length === 0 && unassigned.total <= 0 && (
+        <tr className="bg-primary/[0.03]"><td colSpan={colCount} className="py-3 pl-8 text-muted-foreground">No member leads in this period</td></tr>
+      )}
+      {list.map((m) => (
+        <motion.tr key={m.userId} initial={{ opacity:0,y:-4 }} animate={{ opacity:1,y:0 }} className="bg-primary/[0.03] text-[11px]">
+          <td />
+          <td className="py-2 pr-3 pl-5">
+            <div className="flex items-center gap-2 border-l-2 border-primary/30 pl-2">
+              <span className="font-medium text-foreground truncate max-w-[140px]">{m.name}</span>
+              {m.designation && <span className="text-[10px] text-muted-foreground truncate max-w-[90px] hidden md:inline">{m.designation}</span>}
+            </div>
+          </td>
+          <td />
+          <td className="py-2 px-2 text-right font-semibold tabular-nums">{m.total}</td>
+          <StatusCells item={m as unknown as Record<string, number>} muted />
+          <td className="py-2 px-2 text-right whitespace-nowrap"><span className="text-emerald-500 tabular-nums">{fullUSD(m.revenue ?? 0)}</span></td>
+          <td className="py-2 pl-2 text-right"><ConvRate rate={m.conversionRate} /></td>
+        </motion.tr>
+      ))}
+      {open && !members.isLoading && unassigned.total > 0 && (
+        <tr className="bg-primary/[0.03] text-[11px]">
+          <td />
+          <td className="py-2 pr-3 pl-5"><div className="border-l-2 border-border pl-2 italic text-muted-foreground">Unassigned</div></td>
+          <td />
+          <td className="py-2 px-2 text-right font-semibold tabular-nums">{unassigned.total}</td>
+          <StatusCells item={unassigned} muted />
+          <td className="py-2 px-2 text-right text-muted-foreground/40">—</td>
+          <td className="py-2 pl-2 text-right text-muted-foreground/40">—</td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -370,6 +516,7 @@ function OverviewTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
   const timeline  = useReportTimeline(period, dateFrom, dateTo);
   const userRanks = useReportUserRankings(dateFrom, dateTo);
   const teamRanks = useReportTeamRankings(dateFrom, dateTo);
+  const [openTeam, setOpenTeam] = useState<string | null>(null);
 
   const isLoading  = overview.isLoading;
   const summary    = overview.data?.summary;
@@ -515,134 +662,133 @@ function OverviewTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
         </motion.div>
       </div>
 
-      {/* User + Team rankings */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* User Rankings */}
-        <motion.div initial={{ opacity:0,y:20 }} animate={{ opacity:1,y:0 }} transition={{ delay:0.42 }}>
-          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Award className="h-4 w-4 text-primary" /> User Rankings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="overflow-x-auto -mx-2 px-2">
-                {userRanks.isLoading
-                  ? <div className="space-y-2">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-                  : !userRanks.data?.length ? <Empty />
-                  : (
-                    <table className="w-full text-xs min-w-[620px]">
-                      <thead>
-                        <tr className="border-b border-border/50">
-                          <th className="pb-2 text-left font-medium text-muted-foreground w-8">#</th>
-                          <th className="pb-2 text-left font-medium text-muted-foreground">Agent</th>
-                          <th className="pb-2 text-right font-medium text-muted-foreground">Total</th>
-                          <th className="pb-2 text-right font-medium text-green-500">Closed</th>
-                          <th className="pb-2 text-right font-medium text-emerald-500">Revenue</th>
-                          <th className="pb-2 text-right font-medium text-amber-500">Pending</th>
-                          <th className="pb-2 text-right font-medium text-muted-foreground">Conv%</th>
-                          <th className="pb-2 text-left font-medium text-muted-foreground pl-3 hidden sm:table-cell">Breakdown</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/30">
-                        {userRanks.data.map((u) => (
-                          <motion.tr key={u.userId} initial={{ opacity:0,x:-10 }} animate={{ opacity:1,x:0 }} transition={{ delay:0.05*u.rank }} className="hover:bg-muted/30 transition-colors">
-                            <td className="py-2.5 pr-2"><RankBadge rank={u.rank} /></td>
-                            <td className="py-2.5 pr-3">
-                              <div className="flex items-center gap-2">
-                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs uppercase">{u.name.charAt(0)}</div>
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-foreground truncate max-w-[120px]">{u.name}</p>
-                                  {u.designation && <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{u.designation}</p>}
-                                </div>
+      {/* User Rankings — full width, every status */}
+      <motion.div initial={{ opacity:0,y:20 }} animate={{ opacity:1,y:0 }} transition={{ delay:0.42 }}>
+        <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Award className="h-4 w-4 text-primary" /> User Rankings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="overflow-x-auto -mx-2 px-2">
+              {userRanks.isLoading
+                ? <div className="space-y-2">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+                : !userRanks.data?.length ? <Empty />
+                : (
+                  <table className="w-full text-xs min-w-[1180px]">
+                    <thead>
+                      <tr className="border-b border-border/50">
+                        <th className="pb-2 text-left font-medium text-muted-foreground w-8">#</th>
+                        <th className="pb-2 text-left font-medium text-muted-foreground">Agent</th>
+                        <th className="pb-2 px-2 text-right font-semibold text-foreground">Total</th>
+                        <StatusHeadCells />
+                        <th className="pb-2 px-2 text-right font-medium text-emerald-500">Revenue</th>
+                        <th className="pb-2 px-2 text-right font-medium text-amber-500">Pending</th>
+                        <th className="pb-2 pl-2 text-right font-medium text-muted-foreground">Conv%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/30">
+                      {userRanks.data.map((u) => (
+                        <motion.tr key={u.userId} initial={{ opacity:0,x:-10 }} animate={{ opacity:1,x:0 }} transition={{ delay:0.03*u.rank }} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 pr-2"><RankBadge rank={u.rank} /></td>
+                          <td className="py-2.5 pr-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs uppercase">{u.name.charAt(0)}</div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-foreground truncate max-w-[140px]">{u.name}</p>
+                                {u.designation && <p className="text-[10px] text-muted-foreground truncate max-w-[140px]">{u.designation}</p>}
                               </div>
-                            </td>
-                            <td className="py-2.5 text-right font-semibold tabular-nums">{u.total}</td>
-                            <td className="py-2.5 text-right"><span className="font-bold text-green-500 tabular-nums">{u.closed}</span></td>
-                            <td className="py-2.5 text-right">
-                              <span className="font-semibold text-emerald-500 tabular-nums">{fmtUSD(u.revenue ?? 0)}</span>
-                            </td>
-                            <td className="py-2.5 text-right">
-                              <span className={cn("font-semibold tabular-nums", (u.pendingAmount ?? 0) > 0 ? "text-amber-500" : "text-muted-foreground")}>
-                                {fmtUSD(u.pendingAmount ?? 0)}
-                              </span>
-                            </td>
-                            <td className="py-2.5 text-right">
-                              <span className={cn("font-semibold tabular-nums", u.conversionRate>=50?"text-green-500":u.conversionRate>=25?"text-yellow-500":"text-muted-foreground")}>
-                                {u.conversionRate}%
-                              </span>
-                            </td>
-                            <td className="py-2.5 pl-3 hidden sm:table-cell">
-                              <MiniStatusBars item={u as unknown as Record<string,number>} total={u.total} />
-                            </td>
-                          </motion.tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )
-                }
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-2 text-right font-bold tabular-nums">{u.total}</td>
+                          <StatusCells item={u as unknown as Record<string, number>} />
+                          <td className="py-2.5 px-2 text-right whitespace-nowrap"><span className="font-semibold text-emerald-500 tabular-nums">{fmtUSD(u.revenue ?? 0)}</span></td>
+                          <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                            <span className={cn("font-semibold tabular-nums", (u.pendingAmount ?? 0) > 0 ? "text-amber-500" : "text-muted-foreground")}>{fmtUSD(u.pendingAmount ?? 0)}</span>
+                          </td>
+                          <td className="py-2.5 pl-2 text-right"><ConvRate rate={u.conversionRate} /></td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <TotalsRow
+                        rows={userRanks.data as unknown as Record<string, number>[]}
+                        lead={<><td /><td className="pt-2.5 pb-1 text-xs font-semibold text-muted-foreground">Total ({userRanks.data.length})</td></>}
+                        money={[
+                          { key: "revenue",       cls: "text-emerald-500" },
+                          { key: "pendingAmount", cls: "text-amber-500"   },
+                        ]}
+                      />
+                    </tfoot>
+                  </table>
+                )
+              }
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-        {/* Team Rankings */}
-        <motion.div initial={{ opacity:0,y:20 }} animate={{ opacity:1,y:0 }} transition={{ delay:0.48 }}>
-          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <UsersRound className="h-4 w-4 text-primary" /> Team Rankings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="overflow-x-auto -mx-2 px-2">
-                {teamRanks.isLoading
-                  ? <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-                  : !teamRanks.data?.length ? <Empty />
-                  : (
-                    <table className="w-full text-xs min-w-[520px]">
-                      <thead>
-                        <tr className="border-b border-border/50">
-                          <th className="pb-2 text-left font-medium text-muted-foreground w-8">#</th>
-                          <th className="pb-2 text-left font-medium text-muted-foreground">Team</th>
-                          <th className="pb-2 text-right font-medium text-muted-foreground">Members</th>
-                          <th className="pb-2 text-right font-medium text-muted-foreground">Leads</th>
-                          <th className="pb-2 text-right font-medium text-emerald-500">Revenue</th>
-                          <th className="pb-2 text-right font-medium text-muted-foreground">Conv%</th>
-                          <th className="pb-2 text-left font-medium text-muted-foreground pl-3 hidden sm:table-cell">Breakdown</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/30">
-                        {teamRanks.data.map((t) => (
-                          <motion.tr key={t.teamId} initial={{ opacity:0,x:10 }} animate={{ opacity:1,x:0 }} transition={{ delay:0.05*t.rank }} className="hover:bg-muted/30 transition-colors">
-                            <td className="py-2.5 pr-2"><RankBadge rank={t.rank} /></td>
-                            <td className="py-2.5 pr-3"><p className="font-semibold text-foreground truncate max-w-[140px]">{t.name}</p></td>
-                            <td className="py-2.5 text-right tabular-nums text-muted-foreground">{t.memberCount}</td>
-                            <td className="py-2.5 text-right font-semibold tabular-nums">{t.total}</td>
-                            <td className="py-2.5 text-right">
-                              <span className="font-bold text-emerald-500 tabular-nums">
-                                {fullUSD(t.totalPayments ?? 0)}
-                              </span>
-                            </td>
-                            <td className="py-2.5 text-right">
-                              <span className={cn("font-semibold tabular-nums", t.conversionRate>=50?"text-green-500":t.conversionRate>=25?"text-yellow-500":"text-muted-foreground")}>
-                                {t.conversionRate}%
-                              </span>
-                            </td>
-                            <td className="py-2.5 pl-3 hidden sm:table-cell">
-                              <MiniStatusBars item={t as unknown as Record<string,number>} total={t.total} />
-                            </td>
-                          </motion.tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )
-                }
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+      {/* Team Rankings — full width, click a team for its members */}
+      <motion.div initial={{ opacity:0,y:20 }} animate={{ opacity:1,y:0 }} transition={{ delay:0.48 }}>
+        <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <UsersRound className="h-4 w-4 text-primary" /> Team Rankings
+              <span className="text-[11px] font-normal text-muted-foreground">· click a team to see its members</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="overflow-x-auto -mx-2 px-2">
+              {teamRanks.isLoading
+                ? <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+                : !teamRanks.data?.length ? <Empty />
+                : (
+                  <table className="w-full text-xs min-w-[1180px]">
+                    <thead>
+                      <tr className="border-b border-border/50">
+                        <th className="pb-2 text-left font-medium text-muted-foreground w-8">#</th>
+                        <th className="pb-2 text-left font-medium text-muted-foreground">Team</th>
+                        <th className="pb-2 px-2 text-right font-medium text-muted-foreground">Members</th>
+                        <th className="pb-2 px-2 text-right font-semibold text-foreground">Total</th>
+                        <StatusHeadCells />
+                        <th className="pb-2 px-2 text-right font-medium text-emerald-500">Revenue</th>
+                        <th className="pb-2 pl-2 text-right font-medium text-muted-foreground">Conv%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/30">
+                      {teamRanks.data.map((t) => {
+                        const open = openTeam === t.teamId;
+                        return (
+                          <TeamRankRows
+                            key={t.teamId}
+                            team={t}
+                            open={open}
+                            onToggle={() => setOpenTeam(open ? null : t.teamId)}
+                            dateFrom={dateFrom}
+                            dateTo={dateTo}
+                          />
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <TotalsRow
+                        rows={teamRanks.data as unknown as Record<string, number>[]}
+                        lead={<>
+                          <td />
+                          <td className="pt-2.5 pb-1 text-xs font-semibold text-muted-foreground">Total ({teamRanks.data.length})</td>
+                          <td className="pt-2.5 pb-1 px-2 text-right tabular-nums text-muted-foreground">{teamRanks.data.reduce((a, t) => a + (t.memberCount ?? 0), 0)}</td>
+                        </>}
+                        money={[{ key: "totalPayments", cls: "text-emerald-500" }]}
+                      />
+                    </tfoot>
+                  </table>
+                )
+              }
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Status bars + Source */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

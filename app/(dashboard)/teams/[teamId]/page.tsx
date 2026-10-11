@@ -3332,21 +3332,9 @@ const REPORT_PERIODS: { value: ReportPeriod; label: string }[] = [
   { value: "custom", label: "Custom Range" },
 ];
 
-const STATUS_COLS: { key: keyof TeamMemberSplitItem; label: string; color: string }[] = [
-  { key: "new",            label: "New",          color: "text-sky-400"    },
-  { key: "assigned",       label: "Assigned",     color: "text-blue-400"   },
-  { key: "followup",       label: "Follow-up",    color: "text-amber-400"  },
-  { key: "interested",     label: "Interested",   color: "text-violet-400" },
-  { key: "booking",        label: "Booking",      color: "text-orange-400" },
-  { key: "partialbooking", label: "Part.Book",    color: "text-orange-300" },
-  { key: "closed",         label: "Closed",       color: "text-green-400"  },
-  { key: "rnr",            label: "RNR",          color: "text-pink-400"   },
-  { key: "callback",       label: "Callback",     color: "text-cyan-400"   },
-  { key: "cnc",            label: "CNC",          color: "text-red-400"    },
-  { key: "rejected",       label: "Rejected",     color: "text-rose-500"   },
-  { key: "whatsapp",       label: "WhatsApp",     color: "text-emerald-400"},
-  { key: "student",        label: "Student",      color: "text-indigo-400" },
-];
+// Every status a lead can have today, in the app's own order, labels and colours
+const STATUS_COLS: { key: keyof TeamMemberSplitItem; label: string; color: string }[] =
+  LEAD_STATUSES.map((st) => ({ key: st, label: SM[st].label, color: SM[st].text }));
 
 function ReportTab({ teamId }: { teamId: string }) {
   const [period, setPeriod]   = useState<ReportPeriod>("month");
@@ -3469,8 +3457,9 @@ function ReportTab({ teamId }: { teamId: string }) {
                     <th className="pb-2.5 text-left font-medium text-muted-foreground pr-4 min-w-[140px]">Member</th>
                     <th className="pb-2.5 text-right font-semibold text-foreground pr-3">Total</th>
                     {STATUS_COLS.map((c) => (
-                      <th key={c.key} className={`pb-2.5 text-right font-medium pr-3 ${c.color}`}>{c.label}</th>
+                      <th key={c.key} className={`pb-2.5 text-right font-medium pr-3 whitespace-nowrap ${c.color}`}>{c.label}</th>
                     ))}
+                    <th className="pb-2.5 text-right font-medium text-emerald-500 pr-3">Revenue</th>
                     <th className="pb-2.5 text-right font-medium text-muted-foreground">Conv%</th>
                   </tr>
                 </thead>
@@ -3525,6 +3514,13 @@ function ReportTab({ teamId }: { teamId: string }) {
                         );
                       })}
 
+                      {/* Revenue */}
+                      <td className="py-3 pr-3 text-right whitespace-nowrap">
+                        <span className={`font-semibold tabular-nums ${m.revenue > 0 ? "text-emerald-500" : "text-muted-foreground/40"}`}>
+                          {m.revenue > 0 ? fmtFull(m.revenue) : "—"}
+                        </span>
+                      </td>
+
                       {/* Conv% */}
                       <td className="py-3 text-right">
                         <span className={`font-semibold tabular-nums ${
@@ -3557,6 +3553,11 @@ function ReportTab({ teamId }: { teamId: string }) {
                         </td>
                       );
                     })}
+                    <td className="pt-2.5 pb-1 pr-3 text-right whitespace-nowrap">
+                      <span className="font-semibold tabular-nums text-emerald-500">
+                        {fmtFull(data.reduce((s, m) => s + (m.revenue ?? 0), 0))}
+                      </span>
+                    </td>
                     <td className="pt-2.5 pb-1 text-right">
                       <span className={`font-semibold tabular-nums ${
                         totalLeads > 0 && (totalClosed / totalLeads) * 100 >= 50 ? "text-green-400"
