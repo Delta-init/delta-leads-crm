@@ -811,3 +811,23 @@ person's second course (the same phone) is fine.
 
 **API**: `GET /students/email-check?email=&leadId=|studentId=` → `{ ok, takenBy?, message? }`; 409 with the message from
 `POST /students`, `PUT /students/:id/correction`, `POST /students/:id/enrolment/email`, `POST /students/:id/invoice`.
+
+## Calls from 3CX — the Calls page and a lead's Calls (2026-10-12)
+
+**What it does**: As in Tetra Commission. The **Calls** page (sidebar; its own "Calls (3CX)" row on the Roles screen,
+open to every role until unticked) lists only calls with a lead through 3CX, synced by the API every minute — the old
+click-to-call / journal log is no longer listed there. Date presets (Today, 7 days, 30 days, This month, Custom — GST
+days), direction (in/out), result (connected / missed / not answered), salesperson, lead name or number search, sorting
+(newest/oldest, talk, ring), paging, CSV of everything matching. Totals: all, outgoing, incoming, connected, missed, not
+answered, talk time, average call (clicking a total filters by it); a per-salesperson table (click a row to filter).
+Each call: when, the lead (link + Call button), in/out and result, who (CRM user or 3CX extension), talk, ring, and the
+recording (Play — a 10-minute link, streamed from 3CX through the API). A "Last synced … / 3CX not connected / first
+import running" line; a super admin also sees what went wrong and a **Sync now** button. The lead page's **Calls** card
+shows that lead's 3CX calls and recordings the same way; its Call button is unchanged. The user form's 3CX extension says
+whether it came from 3CX (filled by email) — a typed one is kept.
+
+**Who sees what**: decided by the API — your own calls and your leads'; a team leader their teams'; Super Admin,
+Reporter and the Sales Manager everyone's.
+
+**API**: `GET /calls/3cx/stats|list|export|lead/:leadId|:id/recording-link`, `POST /calls/3cx/sync`. The API must be
+deployed first (the page reads only these routes).

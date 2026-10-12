@@ -1438,3 +1438,34 @@ devices", rejects with its reason); `showLocalTestNotification()` — the servic
 - `useCreateStudent`, `useCorrectEnrolment`, `useAddEnrolmentEmail` — a 409 "This email is already used by …"
   (`isTakenEmailMessage`) also refreshes the email checks.
 - `types/student.ts`: `ClientEmailCheck`, `isTakenEmailMessage`.
+
+---
+
+## 3CX calls with leads (2026-10-12)
+
+All in `hooks/useThreecxCalls.ts`; filters `{ from, to (GST YYYY-MM-DD), direction, result, person, search, sort, order }`.
+
+### GET /calls/3cx/stats
+- **Hook**: `useCallStats(filters)` — Query Key `["threecx-calls","stats",filters]`, every minute
+- **Returns**: `{ stats, people, threecx, canSync }` · **Used in**: `app/(dashboard)/calls/page.tsx`
+
+### GET /calls/3cx/list
+- **Hook**: `useCallList(filters, page, limit)` — Query Key `["threecx-calls","list",…]`, paginated (`pagination`)
+- **Used in**: `app/(dashboard)/calls/page.tsx`
+
+### GET /calls/3cx/export
+- **Function**: `downloadCallsCsv(filters)` (blob → calls_<from>_<to>.csv) · needs `calls:export`
+
+### GET /calls/3cx/lead/:leadId
+- **Hook**: `useLeadThreecxCalls(leadId, enabled)` — Query Key `["threecx-calls","lead",leadId]`
+- **Used in**: `components/leads/CallsPanel.tsx` (lead page)
+
+### GET /calls/3cx/:id/recording-link?index=
+- **Function**: `getRecordingLink(callId, index)` → a 10-minute `/api/v1/calls/3cx/recording?…` URL for `<audio>`
+- **Used in**: `RecordingPlayer` (`components/calls/callUi.tsx`)
+
+### POST /calls/3cx/sync
+- **Hook**: `useSyncCallsNow()` — Super Admin's Sync now; invalidates `["threecx-calls"]`
+
+`useLeadCalls` / `useRecentCalls` (`GET /calls/lead/:leadId`, `/calls/recent`) are no longer used by the Calls page or the
+lead page; the QC pages still use `useCalls.ts`.

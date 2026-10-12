@@ -12,7 +12,7 @@ import api from "@/lib/axios";
 import type { AuthUser } from "@/types";
 
 // The permission a page needs. Most pages share their URL's name with their
-// module, but not all (/my-tracker → "tracker", /calls → "leads"), so take it
+// module, but not all (/my-tracker → "tracker"), so take it
 // from the menu. null = open to everyone signed in (Mentors). Settings stays
 // behind its own module as before, even though the menu always lists it.
 function pageModule(path: string): string | null {

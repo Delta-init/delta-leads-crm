@@ -37,6 +37,8 @@ export const CRM_MODULES = [
   "commission",
   "leaderboard",
   "pay",
+  /* The Calls page — 3CX calls with leads (2026-10-12). Open by default like the rows above. */
+  "calls",
 ] as const;
 
 export type CrmModule = (typeof CRM_MODULES)[number];
@@ -59,6 +61,7 @@ export const MODULE_LABELS: Record<CrmModule, string> = {
   commission: "Commission",
   leaderboard: "Leaderboard",
   pay: "My Pay",
+  calls: "Calls (3CX)",
 };
 
 
@@ -78,6 +81,7 @@ export const OPEN_BY_DEFAULT: Partial<Record<CrmModule, Partial<ModulePermission
   commission: { view: true },
   leaderboard: { view: true },
   pay: { view: true },
+  calls: { view: true, export: true },
 };
 
 /** A role's permissions on one module — what it was given, or the module's default. */
@@ -106,6 +110,8 @@ export interface User {
   role: Role | string;
   designation?: string;
   extension?: string | null;   // 3CX phone extension e.g. "101"
+  /** "3cx" — filled in from 3CX by email; "manual" — typed here (3CX never overwrites it). */
+  extensionSource?: "3cx" | "manual" | null;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;

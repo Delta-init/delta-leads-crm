@@ -198,6 +198,11 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                 {...register("extension")}
               />
               {errors.extension && <p className="text-xs text-destructive">{errors.extension.message}</p>}
+              <p className="text-[11px] text-muted-foreground">
+                {user?.extensionSource === "3cx"
+                  ? "Filled in from 3CX by email. Typing another one keeps yours."
+                  : "Left empty, it is filled in from 3CX by email. One typed here is kept."}
+              </p>
             </div>
           </div>
 

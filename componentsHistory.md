@@ -1115,3 +1115,21 @@ A new close starts "Bonus given?" at yes with the course's bonus, marked "From t
 - `CorrectEnrolmentDialog` — the same message under Email (from the check, or the server's 409); blocks saving when the
   client's name and phone are as saved, only warns when they were changed (the server weighs those on save).
 - `AddEnrolmentEmail` — the same message, Send again disabled while the email is taken or being checked.
+
+---
+
+### callUi (CallResult, CallPerson, RecordingPlayer, SyncNote, fmtDuration, fmtTalkTotal, fmtWhen)
+- **File**: `/components/calls/callUi.tsx`
+- **Version**: 1.0.0
+- **Created**: 2026-10-12
+- **Status**: active
+
+**Purpose**: How a 3CX call shows (ported from Tetra Commission): in/out + Connected / Missed / Not answered badge, the
+person (CRM user or extension), a recording player (asks for a 10-minute link, plays in `<audio>`, a button per part),
+and the sync line (last synced / 3CX not connected / first import / the error for a super admin).
+
+**Used In**: `app/(dashboard)/calls/page.tsx`, `components/leads/CallsPanel.tsx`.
+
+### CallsPanel (updated 2026-10-12)
+- **File**: `/components/leads/CallsPanel.tsx` — now the lead's **3CX** calls (`useLeadThreecxCalls`), totals chips,
+  first 8 with "Show all", recordings; the ClickToCall button unchanged; hidden history for a role without `calls:view`.
