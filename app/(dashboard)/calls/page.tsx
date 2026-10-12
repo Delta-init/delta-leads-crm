@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowDownUp, CheckCircle2, Clock, Download, Loader2, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing,
-  RefreshCw, Search, Timer, Users, X,
+  PlugZap, RefreshCw, Search, Timer, Users, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/lib/store/authStore";
 import { ClickToCall } from "@/components/leads/ClickToCall";
 import { CallPerson, CallResult, RecordingPlayer, SyncNote, fmtDuration, fmtTalkTotal, fmtWhen } from "@/components/calls/callUi";
+import { ThreecxTestDialog } from "@/components/calls/ThreecxTestDialog";
 import { downloadCallsCsv, useCallList, useCallStats, useSyncCallsNow, type CallFilters } from "@/hooks/useThreecxCalls";
 
 /**
@@ -101,6 +102,7 @@ export default function CallsPage() {
   const statsQ = useCallStats(filters);
   const listQ = useCallList(filters, page, PAGE);
   const syncNow = useSyncCallsNow();
+  const [testing, setTesting] = useState(false);
   const stats = statsQ.data?.stats;
   const people = statsQ.data?.people ?? [];
   const calls = listQ.data?.calls ?? [];
@@ -157,10 +159,16 @@ export default function CallsPage() {
             <p className="text-sm text-muted-foreground">Every call with a lead through 3CX — in or out, connected or missed, who took it, how long, and the recording.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 self-start">
+        <div className="flex flex-wrap items-center gap-2 self-start">
           <Button variant="outline" size="sm" onClick={() => { statsQ.refetch(); listQ.refetch(); }} disabled={statsQ.isFetching || listQ.isFetching}>
             <RefreshCw className={cn("mr-2 h-3.5 w-3.5", (statsQ.isFetching || listQ.isFetching) && "animate-spin")} /> Refresh
           </Button>
+          {/* Super Admin, as Sync now: the connection step by step (2026-10-12). */}
+          {statsQ.data?.canSync && (
+            <Button variant="outline" size="sm" onClick={() => setTesting(true)}>
+              <PlugZap className="mr-2 h-3.5 w-3.5" /> Test connection
+            </Button>
+          )}
           {statsQ.data?.canSync && (
             <Button size="sm" onClick={runSync} disabled={syncNow.isPending}>
               {syncNow.isPending ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-2 h-3.5 w-3.5" />} Sync now
@@ -358,6 +366,8 @@ export default function CallsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ThreecxTestDialog open={testing} onClose={() => setTesting(false)} />
     </div>
   );
 }

@@ -1467,5 +1467,9 @@ All in `hooks/useThreecxCalls.ts`; filters `{ from, to (GST YYYY-MM-DD), directi
 ### POST /calls/3cx/sync
 - **Hook**: `useSyncCallsNow()` — Super Admin's Sync now; invalidates `["threecx-calls"]`
 
+### POST /calls/3cx/test
+- **Call**: `testThreecx()` — Super Admin's Test connection (2026-10-12), as in Tetra Commission: `{ ok, steps[{name, ok, detail}], sample, parsed }` — settings, sign in, extensions, the newest 200 rows of the last 24 hours, one recording. Changes nothing in 3CX.
+- **Used in**: `ThreecxTestDialog` (`components/calls/ThreecxTestDialog.tsx`), opened from the Calls page header
+
 `useLeadCalls` / `useRecentCalls` (`GET /calls/lead/:leadId`, `/calls/recent`) are no longer used by the Calls page or the
 lead page; the QC pages still use `useCalls.ts`.
