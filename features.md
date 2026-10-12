@@ -831,3 +831,13 @@ Reporter and the Sales Manager everyone's.
 
 **API**: `GET /calls/3cx/stats|list|export|lead/:leadId|:id/recording-link`, `POST /calls/3cx/sync`. The API must be
 deployed first (the page reads only these routes).
+
+## Call from the CRM through 3CX, then log the call (2026-10-12)
+
+As in Tetra Commission. Every Call button asks "3CX call" or "Phone call". A 3CX call rings the salesperson's own 3CX web
+client / app first, then dials the lead; a call window follows it live (ringing, calling, connected with a timer, ended)
+and can hang up. Afterwards "How did the call go?": connected or not, the lead's new status through the CRM's own
+dialogs (follow-up date and time, the enrolment for a close, the reason for lost, any other status at once) and notes
+saved on the lead. It can be put aside with Later and comes back after a reload. A lead's Calls / Connected / Not
+connected now come from 3CX (no more typed counters) — on the lead page, the leads table and the kanban cards. The
+Leaderboard counts 3CX calls, connected calls and talk time, and can be ranked by calls or talk time.

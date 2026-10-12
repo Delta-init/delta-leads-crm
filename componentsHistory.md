@@ -1133,3 +1133,43 @@ and the sync line (last synced / 3CX not connected / first import / the error fo
 ### CallsPanel (updated 2026-10-12)
 - **File**: `/components/leads/CallsPanel.tsx` — now the lead's **3CX** calls (`useLeadThreecxCalls`), totals chips,
   first 8 with "Show all", recordings; the ClickToCall button unchanged; hidden history for a role without `calls:view`.
+
+---
+
+### CallFlow (CallFlowProvider, useCallFlow, dialNumbers)
+- **File**: `/components/calls/CallFlow.tsx`
+- **Version**: 1.0.0
+- **Created**: 2026-10-12
+- **Status**: active
+
+**Purpose**: Call, then log it — as in Tetra Commission's `CallFlow.jsx`. One set of dialogs for the app, mounted by
+`app/(dashboard)/layout.tsx`. A Call button opens **CallChoiceDialog**: "3CX call" (when `GET /calls/3cx/click-to-call`
+says the caller's extension is known and 3CX is connected; otherwise why not) or "Phone call" (tel:), a picker when the
+lead has several numbers, Copy number, Open the 3CX web client. A 3CX call (`POST /calls/3cx/call`) opens **CallWindow**:
+polls `GET /calls/3cx/my-call` every 2 s — ringing your 3CX, calling the lead, connected with a timer, ended — Hang up
+(`POST /calls/3cx/hang-up`), Log the call, Close (the call goes on). When it ends, or on Log the call, or after a Phone
+call, **AfterCallDialog** "How did the call go?": connected yes/no (prefilled when 3CX saw it connect); the status — Keep,
+or any of the CRM's statuses (not connected / CNC / callback first when it didn't connect): follow-up opens
+`FollowupDetailsModal` (what happened, when, next follow-up date and time), lost opens `LostReasonModal`, closed opens
+`CloseLeadDialog` (the enrolment; the lead is closed only once it is saved), anything else `PATCH /leads/:id/status`;
+cancelling one of those comes back to the popup. Notes are saved as a lead note (`POST /leads/:id/notes` — the note's
+activity too): "Call (3CX|phone) — connected|not connected · status → X" + the notes. **Later** puts it aside: the log is
+kept in sessionStorage (`crm.pendingCallLog`, 8 hours), reopens after a reload, and a "not logged yet — Log it" chip
+stays in the corner. "Don't log" drops it. Only for calls started here, and only for roles with `leads:edit`.
+
+**Used In**: `ClickToCall` (every Call button: lead page, leads table, calls page, profile, CallsPanel), `KanbanBoard`
+(card menu "Call").
+
+### ClickToCall (rewritten 2026-10-12)
+- **File**: `/components/leads/ClickToCall.tsx` — same props; opens the CallFlow choice (tel: when no provider). No longer
+  posts `/calls/click` or `PATCH /leads/:id/call-count`.
+
+### Call counts from 3CX (2026-10-12)
+- Lead page: the two +/− counters are replaced by a read-only "Calls · from 3CX" box (Calls / Connected / Not connected).
+- Leads table: a "Calls (3CX)" column (all · connected · not), on by default.
+- `KanbanBoard`: card badges calls · connected · not connected; the preview shows all three; the card menu's "CNC +1"
+  is now "Call". `TeamMemberKanban`: calls · not connected badges.
+
+### Leaderboard page / DashboardLeaderboardCard (updated 2026-10-12)
+- Rank by Revenue (as before) / Calls / Talk time; the page adds Calls, Connected and Talk time columns (3CX calls by
+  whoever took them); the card shows Calls + Talk time when ranked by them.

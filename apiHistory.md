@@ -1473,3 +1473,21 @@ All in `hooks/useThreecxCalls.ts`; filters `{ from, to (GST YYYY-MM-DD), directi
 
 `useLeadCalls` / `useRecentCalls` (`GET /calls/lead/:leadId`, `/calls/recent`) are no longer used by the Calls page or the
 lead page; the QC pages still use `useCalls.ts`.
+
+### GET /calls/3cx/click-to-call
+- **Hook**: `useClickToCall()` → `{ enabled, connected, extension, webClientUrl }` (5-minute stale time)
+- **Used in**: `CallFlowProvider` (`components/calls/CallFlow.tsx`)
+
+### POST /calls/3cx/call · GET /calls/3cx/my-call · POST /calls/3cx/hang-up
+- **Calls**: `startThreecxCall(leadId, dial)`, `getMyCall(callId, dial)`, `hangUpMyCall(participantId)` — the Call
+  button's 3CX call, the call window, Hang up (2026-10-12). Errors carry the server's message (and
+  `errors.webClientUrl` when nothing is signed in on the extension).
+- **Used in**: `CallChoiceDialog` / `CallWindow` (`components/calls/CallFlow.tsx`)
+
+### PATCH /leads/:id/call-count · /call-not-connected
+- No longer called (2026-10-12): `useUpdateCallCount` / `useUpdateCallNotConnected` removed — the counts come from 3CX
+  (`callCount`, `callConnected`, `callNotConnected` on the lead).
+
+### GET /leaderboard?month&rankBy
+- **Hook**: `useLeaderboard(month?, rankBy = "revenue")` — rows now carry `connected` and `talkSeconds`; `rankBy`
+  revenue / calls / talk.

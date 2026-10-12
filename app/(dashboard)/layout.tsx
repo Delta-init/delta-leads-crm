@@ -8,6 +8,7 @@ import { navItems } from "@/components/layout/Sidebar";
 import { useReminderNotifications } from "@/hooks/useReminderNotifications";
 import { RecentPageTracker } from "@/components/shared/CommandPalette";
 import { RootPortalHistoryBridge } from "@/components/shared/RootPortalHistoryBridge";
+import { CallFlowProvider } from "@/components/calls/CallFlow";
 import api from "@/lib/axios";
 import type { AuthUser } from "@/types";
 
@@ -71,6 +72,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname]);
 
   return (
+    <CallFlowProvider>
     <div className="flex h-dvh overflow-hidden bg-slate-200 dark:bg-background pwa-safe-top">
       <RootPortalHistoryBridge />
       <RecentPageTracker />
@@ -80,5 +82,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
+    </CallFlowProvider>
   );
 }

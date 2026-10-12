@@ -96,6 +96,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   { id: "demo",                 label: "Demo",               defaultVisible: false },
   { id: "firstContactTime",     label: "First Contact",      defaultVisible: false },
   { id: "lastContactedAt",      label: "Last Contacted",     defaultVisible: false },
+  { id: "calls",                label: "Calls (3CX)",        defaultVisible: true  },
   { id: "initialLeadResponse",  label: "Response",           defaultVisible: true  },
   { id: "primaryConcern",       label: "Concern",            defaultVisible: true  },
   { id: "exactConcern",         label: "Exact Concern",      defaultVisible: false },
@@ -281,6 +282,7 @@ function LeadsPageContent() {
       demo:                 { label: "Demo",          cls: "px-4 py-3 text-left hidden lg:table-cell" },
       firstContactTime:     { label: "First Contact", cls: "px-4 py-3 text-left hidden xl:table-cell" },
       lastContactedAt:      { label: "Last Contacted", cls: "px-4 py-3 text-left hidden xl:table-cell" },
+      calls:                { label: "Calls",          cls: "px-4 py-3 text-left hidden md:table-cell" },
       initialLeadResponse:  { label: "Response",      cls: "px-4 py-3 text-left hidden lg:table-cell" },
       primaryConcern:       { label: "Concern",       cls: "px-4 py-3 text-left hidden lg:table-cell" },
       exactConcern:         { label: "Exact Concern", cls: "px-4 py-3 text-left hidden lg:table-cell" },
@@ -436,6 +438,18 @@ function LeadsPageContent() {
           {lead.firstContactTime
             ? <span className="text-xs text-muted-foreground">{new Date(lead.firstContactTime).toLocaleString("en-AE", { timeZone: "Asia/Dubai", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true })}</span>
             : <span className="text-xs text-muted-foreground/40">—</span>}
+        </td>
+      );
+      // From 3CX (2026-10-12): every call · connected · not connected.
+      case "calls": return (
+        <td key="calls" className="px-4 py-4 hidden md:table-cell" title="Calls from 3CX: all · connected · not connected">
+          {(lead.callCount ?? 0) > 0 ? (
+            <span className="inline-flex items-center gap-1.5 text-xs tabular-nums">
+              <span className="font-semibold text-sky-400">{lead.callCount}</span>
+              <span className="text-green-400">{lead.callConnected ?? 0} conn.</span>
+              <span className="text-orange-400">{lead.callNotConnected ?? 0} not</span>
+            </span>
+          ) : <span className="text-xs text-muted-foreground/40">—</span>}
         </td>
       );
       case "lastContactedAt": return (

@@ -152,3 +152,41 @@ export async function testThreecx(): Promise<ThreecxTestResult> {
   const res = await api.post<ApiResponse<ThreecxTestResult>>("/calls/3cx/test");
   return res.data.data ?? { ok: false, steps: [{ name: "Test", ok: false, detail: res.data.message || "No answer from the server" }] };
 }
+
+/* ── The Call button through 3CX (2026-10-12): 3CX rings your own extension, then dials the lead ── */
+
+/** Whether this person's Call buttons can place the call through 3CX (their extension is known, 3CX connected). */
+export interface ClickToCallInfo { enabled: boolean; connected: boolean; extension: string; webClientUrl: string }
+
+/** Asked once every few minutes — it changes only when an extension or the server's 3CX settings do. */
+export const useClickToCall = (enabled = true) =>
+  useQuery({
+    queryKey: ["threecx-click-to-call"],
+    queryFn: async () => (await api.get<ApiResponse<ClickToCallInfo>>("/calls/3cx/click-to-call")).data.data!,
+    staleTime: 5 * 60_000,
+    enabled,
+  });
+
+/** A 3CX call just placed: on which extension and app, and 3CX's ids for it. */
+export interface StartedCall { extension: string; dial: string; device: string; callId: number | null; participantId: number | null; webClientUrl: string }
+
+/** POST /calls/3cx/call — 3CX rings the caller's 3CX web client / app, they answer, then the lead is dialled. */
+export async function startThreecxCall(leadId: string, dial: string): Promise<StartedCall> {
+  return (await api.post<ApiResponse<StartedCall>>("/calls/3cx/call", { leadId, dial })).data.data!;
+}
+
+/** The caller's own call as 3CX has it now (null once it is gone). */
+export interface MyCallState {
+  extension: string;
+  devices: string[];
+  participant: { id: number | null; status: string; callId: number | null; party: string } | null;
+}
+
+export async function getMyCall(callId: number | null, dial: string): Promise<MyCallState> {
+  return (await api.get<ApiResponse<MyCallState>>("/calls/3cx/my-call", { params: { ...(callId ? { callId } : {}), dial } })).data.data!;
+}
+
+/** Hang up: drops the caller's own leg of the call. */
+export async function hangUpMyCall(participantId: number): Promise<void> {
+  await api.post("/calls/3cx/hang-up", { participantId });
+}

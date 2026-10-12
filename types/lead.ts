@@ -90,8 +90,12 @@ export interface Lead {
   reminders: Reminder[];
   payments: Payment[];
   activityLogs: ActivityLog[];
+  /** From 3CX (2026-10-12): missed + not answered calls with the lead. */
   callNotConnected?: number;
+  /** From 3CX: every call with the lead. */
   callCount?: number;
+  /** From 3CX: the calls that connected. */
+  callConnected?: number;
   platform?: string;
   campaign?: string;
   leadReceivedTime?: string | null;

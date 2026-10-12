@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { ArrowRight, Loader2, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtFull } from "@/lib/currency";
 import { useAuthStore } from "@/lib/store/authStore";
-import { useLeaderboard, type LeaderboardRow } from "@/hooks/useLeaderboard";
+import { RANK_OPTIONS, fmtTalk, useLeaderboard, type LeaderboardRank, type LeaderboardRow } from "@/hooks/useLeaderboard";
 
 /**
  * This month's leaderboard on the dashboard (the owner, 2026-10-07): the top
  * five, and your own place underneath when you are further down. The full board
- * is one click away.
+ * is one click away. Ranked by revenue, or by 3CX calls or talk time (2026-10-12).
  */
 
 const TOP = 5;
@@ -26,7 +27,8 @@ export function DashboardLeaderboardCard() {
 
 function LeaderboardCard() {
   const me = useAuthStore((s) => s.user);
-  const { data, isLoading, error } = useLeaderboard();
+  const [rankBy, setRankBy] = useState<LeaderboardRank>("revenue");
+  const { data, isLoading, error } = useLeaderboard(undefined, rankBy);
   const rows = data?.rows ?? [];
   const top = rows.slice(0, TOP);
   const mine = rows.find((r) => r.userId === me?._id);
@@ -46,7 +48,19 @@ function LeaderboardCard() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">Leaderboard — this month</p>
-            <p className="text-xs text-muted-foreground">Ranked by revenue, then closings</p>
+            <div className="mt-0.5 flex gap-1" role="group" aria-label="Rank by">
+              {RANK_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => setRankBy(o.value)}
+                  className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium",
+                    rankBy === o.value ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground")}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <Link href="/leaderboard" className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline">
@@ -69,16 +83,16 @@ function LeaderboardCard() {
               <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-2 w-12">#</th>
                 <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2 text-right">Revenue</th>
-                <th className="px-4 py-2 text-right">Closings</th>
+                <th className="px-4 py-2 text-right">{rankBy === "revenue" ? "Revenue" : "Calls"}</th>
+                <th className="px-4 py-2 text-right">{rankBy === "revenue" ? "Closings" : "Talk time"}</th>
               </tr>
             </thead>
             <tbody>
-              {top.map((r) => <Row key={r.userId} r={r} mine={r.userId === me?._id} />)}
+              {top.map((r) => <Row key={r.userId} r={r} mine={r.userId === me?._id} rankBy={rankBy} />)}
               {showMine && (
                 <>
                   <tr><td colSpan={4} className="px-4 py-1 text-center text-xs text-muted-foreground">…</td></tr>
-                  <Row r={mine} mine />
+                  <Row r={mine} mine rankBy={rankBy} />
                 </>
               )}
             </tbody>
@@ -89,7 +103,7 @@ function LeaderboardCard() {
   );
 }
 
-function Row({ r, mine }: { r: LeaderboardRow; mine: boolean }) {
+function Row({ r, mine, rankBy }: { r: LeaderboardRow; mine: boolean; rankBy: LeaderboardRank }) {
   return (
     <tr className={cn("border-b border-border/40 last:border-0", mine && "bg-primary/10")}>
       <td className="px-4 py-2 font-semibold text-foreground">{MEDALS[r.rank - 1] ?? r.rank}</td>
@@ -97,8 +111,17 @@ function Row({ r, mine }: { r: LeaderboardRow; mine: boolean }) {
         {r.name}
         {mine && <span className="ml-2 rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">You</span>}
       </td>
-      <td className="px-4 py-2 text-right font-semibold text-foreground tabular-nums">{fmtFull(r.revenue)}</td>
-      <td className="px-4 py-2 text-right tabular-nums">{r.closings}</td>
+      {rankBy === "revenue" ? (
+        <>
+          <td className="px-4 py-2 text-right font-semibold text-foreground tabular-nums">{fmtFull(r.revenue)}</td>
+          <td className="px-4 py-2 text-right tabular-nums">{r.closings}</td>
+        </>
+      ) : (
+        <>
+          <td className={cn("px-4 py-2 text-right tabular-nums", rankBy === "calls" && "font-semibold text-foreground")}>{r.calls}</td>
+          <td className={cn("px-4 py-2 text-right tabular-nums", rankBy === "talk" && "font-semibold text-foreground")}>{fmtTalk(r.talkSeconds)}</td>
+        </>
+      )}
     </tr>
   );
 }

@@ -440,43 +440,8 @@ export const useDeleteLeadNote = () => {
   });
 };
 
-// ─── Call Not Connected ───────────────────────────────────────────────────────
-export const useUpdateCallNotConnected = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ leadId, action }: { leadId: string; action: "increment" | "decrement" }) => {
-      const response = await api.patch<ApiResponse<{ callNotConnected: number; callCount: number }>>(
-        `/leads/${leadId}/call-not-connected`,
-        { action },
-      );
-      return response.data.data!;
-    },
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.leadId] });
-      queryClient.invalidateQueries({ queryKey: LEADS_KEY, exact: false });
-    },
-    onError: (error: unknown) => toast.error(errMsg(error, "Failed to update call count")),
-  });
-};
-
-// ─── Call Count ───────────────────────────────────────────────────────────────
-export const useUpdateCallCount = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ leadId, action }: { leadId: string; action: "increment" | "decrement" }) => {
-      const response = await api.patch<ApiResponse<{ callCount: number }>>(
-        `/leads/${leadId}/call-count`,
-        { action },
-      );
-      return response.data.data!;
-    },
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.leadId] });
-      queryClient.invalidateQueries({ queryKey: LEADS_KEY, exact: false });
-    },
-    onError: (error: unknown) => toast.error(errMsg(error, "Failed to update call count")),
-  });
-};
+// Call counts (callCount / callConnected / callNotConnected) come from 3CX since 2026-10-12 — recomputed by the
+// API's call sync, not changed from here.
 
 
 // ── Follow-Up hooks ───────────────────────────────────────────────────────────

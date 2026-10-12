@@ -6,14 +6,15 @@ import { Loader2, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtFull } from "@/lib/currency";
 import { useAuthStore } from "@/lib/store/authStore";
-import { useLeaderboard } from "@/hooks/useLeaderboard";
+import { RANK_OPTIONS, fmtTalk, useLeaderboard, type LeaderboardRank } from "@/hooks/useLeaderboard";
 
 /**
  * Leaderboard (the owner, 2026-10-07).
  *
  * Every salesperson's month, ranked by revenue, then closings, then follow-ups,
- * then calls — counted on the server, in Dubai months. Open to everyone; your
- * own row is marked.
+ * then calls — or by calls or talk time (2026-10-12) — counted on the server,
+ * in Dubai months. Calls, connected and talk time are the 3CX calls (the Calls
+ * page's), by whoever took them. Open to everyone; your own row is marked.
  */
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -32,7 +33,8 @@ function monthLabel(m: string): string {
 export default function LeaderboardPage() {
   const [month, setMonth] = useState(thisDubaiMonth);
   const me = useAuthStore((s) => s.user);
-  const { data, isLoading, error } = useLeaderboard(month);
+  const [rankBy, setRankBy] = useState<LeaderboardRank>("revenue");
+  const { data, isLoading, error } = useLeaderboard(month, rankBy);
   const rows = data?.rows ?? [];
 
   return (
@@ -49,9 +51,24 @@ export default function LeaderboardPage() {
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-foreground">Leaderboard</h1>
             <p className="text-sm text-muted-foreground">
-              {monthLabel(month)} — ranked by revenue, then closings, follow-ups and calls
+              {monthLabel(month)} — {rankBy === "revenue" ? "ranked by revenue, then closings, follow-ups and calls"
+                : rankBy === "calls" ? "ranked by 3CX calls, then talk time" : "ranked by talk time on 3CX, then calls"}
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+        <div className="flex rounded-lg border border-border bg-card p-0.5" role="group" aria-label="Rank by">
+          {RANK_OPTIONS.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => setRankBy(o.value)}
+              className={cn("rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                rankBy === o.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
+            >
+              {o.label}
+            </button>
+          ))}
         </div>
         <input
           type="month"
@@ -61,6 +78,7 @@ export default function LeaderboardPage() {
           className="h-9 rounded-lg border border-border bg-card px-3 text-sm text-foreground"
           aria-label="Month"
         />
+        </div>
       </motion.div>
 
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
@@ -86,6 +104,8 @@ export default function LeaderboardPage() {
                   <th className="px-4 py-3 text-right">Closings</th>
                   <th className="px-4 py-3 text-right">Follow-ups</th>
                   <th className="px-4 py-3 text-right">Calls</th>
+                  <th className="px-4 py-3 text-right">Connected</th>
+                  <th className="px-4 py-3 text-right">Talk time</th>
                 </tr>
               </thead>
               <tbody>
@@ -107,7 +127,9 @@ export default function LeaderboardPage() {
                       <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums">{fmtFull(r.revenue)}</td>
                       <td className="px-4 py-3 text-right tabular-nums">{r.closings}</td>
                       <td className="px-4 py-3 text-right tabular-nums">{r.followUps}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{r.calls}</td>
+                      <td className={cn("px-4 py-3 text-right tabular-nums", rankBy === "calls" && "font-semibold text-foreground")}>{r.calls}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{r.connected}</td>
+                      <td className={cn("px-4 py-3 text-right tabular-nums", rankBy === "talk" && "font-semibold text-foreground")}>{fmtTalk(r.talkSeconds)}</td>
                     </motion.tr>
                   );
                 })}

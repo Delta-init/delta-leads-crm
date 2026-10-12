@@ -217,12 +217,21 @@ function MemberCard({ lead, memberId, onPreview, accentDot }: MemberCardProps) {
           <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusColor}`}>
             {statusLabel}
           </span>
-          {(lead.callNotConnected ?? 0) > 0 && (
-            <div className="flex items-center gap-0.5 shrink-0">
-              <PhoneOff className="h-3 w-3 text-orange-400" />
-              <span className="text-[11px] font-bold text-orange-400">{lead.callNotConnected}</span>
-            </div>
-          )}
+          {/* From 3CX (2026-10-12): calls · not connected */}
+          <div className="flex items-center gap-2 shrink-0" title="Calls from 3CX: all · not connected">
+            {(lead.callCount ?? 0) > 0 && (
+              <div className="flex items-center gap-0.5">
+                <Phone className="h-3 w-3 text-sky-400" />
+                <span className="text-[11px] font-bold text-sky-400">{lead.callCount}</span>
+              </div>
+            )}
+            {(lead.callNotConnected ?? 0) > 0 && (
+              <div className="flex items-center gap-0.5">
+                <PhoneOff className="h-3 w-3 text-orange-400" />
+                <span className="text-[11px] font-bold text-orange-400">{lead.callNotConnected}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {((lead.notes?.length ?? 0) > 0 || (lead.reminders?.length ?? 0) > 0) && (

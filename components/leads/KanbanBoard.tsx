@@ -15,7 +15,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import {
-  Eye, Loader2, Phone, Mail, User2, ExternalLink,
+  Eye, Loader2, Phone, PhoneCall, Mail, User2, ExternalLink,
   Calendar, Clock, BookOpen, Users, StickyNote, Bell, PhoneOff, X,
   Pencil, CreditCard, MoreHorizontal, AlarmClock, MessageSquarePlus,
 } from "lucide-react";
@@ -38,7 +38,7 @@ import {
   ResponsiveDialogFooter,
 } from "@/components/ui/responsive-dialog";
 import {
-  useLeads, useUpdateLeadStatus, useUpdateCallNotConnected,
+  useLeads, useUpdateLeadStatus,
   useAddLeadNote, useLead,
 } from "@/hooks/useLeads";
 import { useAddPayment } from "@/hooks/usePayments";
@@ -53,6 +53,7 @@ import LeadDialog from "@/components/leads/LeadDialog";
 import { LostReasonModal } from "@/components/leads/LostReasonModal";
 import { FollowupDetailsModal } from "@/components/leads/FollowupDetailsModal";
 import { CloseLeadDialog } from "@/components/students/CloseLeadDialog";
+import { useCallFlow } from "@/components/calls/CallFlow";
 import { fmtFull, getCurrencySymbol } from "@/lib/currency";
 import { INITIAL_RESPONSE_CONFIG, PRIMARY_CONCERN_CONFIG, FOLLOWUP_STRATEGY_CONFIG } from "@/lib/leadConfig";
 
@@ -321,10 +322,10 @@ interface KanbanActionsMenuProps {
   onAddPayment: (lead: Lead) => void;
   onAddReminder: (lead: Lead) => void;
   onAddNote: (lead: Lead) => void;
-  onCNC: (leadId: string) => void;
+  onCall: (lead: Lead) => void;
 }
 
-function KanbanActionsMenu({ lead, onEdit, onAddPayment, onAddReminder, onAddNote, onCNC }: KanbanActionsMenuProps) {
+function KanbanActionsMenu({ lead, onEdit, onAddPayment, onAddReminder, onAddNote, onCall }: KanbanActionsMenuProps) {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -351,7 +352,7 @@ function KanbanActionsMenu({ lead, onEdit, onAddPayment, onAddReminder, onAddNot
       { icon: CreditCard,       label: "Add Payment",  color: "text-teal-400",      onClick: () => onAddPayment(lead)     },
       { icon: AlarmClock,       label: "Add Reminder", color: "text-violet-400",    onClick: () => onAddReminder(lead)    },
       { icon: MessageSquarePlus, label: "Notes",       color: "text-blue-400",      onClick: () => onAddNote(lead)        },
-      { icon: PhoneOff,         label: "CNC +1",       color: "text-orange-400",    onClick: () => onCNC(lead._id)        },
+      { icon: Phone,            label: "Call",         color: "text-green-400",     onClick: () => onCall(lead)           },
     ];
 
     return (
@@ -422,8 +423,8 @@ function KanbanActionsMenu({ lead, onEdit, onAddPayment, onAddReminder, onAddNot
           <MessageSquarePlus className="h-3.5 w-3.5 text-blue-400" /> Notes
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => onCNC(lead._id)} className="gap-2 text-xs">
-          <PhoneOff className="h-3.5 w-3.5 text-orange-400" /> CNC +1
+        <DropdownMenuItem onClick={() => onCall(lead)} className="gap-2 text-xs" disabled={!lead.phone}>
+          <Phone className="h-3.5 w-3.5 text-green-400" /> Call
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -546,12 +547,14 @@ function LeadPreviewBody({
             })()}
           </div>
         )}
-        <div className="grid grid-cols-4 gap-2 pt-1">
+        {/* Calls / Connected / Not connected come from 3CX (2026-10-12). */}
+        <div className="grid grid-cols-5 gap-2 pt-1">
           {[
             { icon: StickyNote, label: "Notes",     value: lead.notes?.length ?? 0,    color: "text-blue-400"   },
             { icon: Bell,       label: "Reminders", value: lead.reminders?.length ?? 0, color: "text-violet-400" },
-            { icon: PhoneOff,   label: "CNC",       value: lead.callNotConnected ?? 0,  color: "text-orange-400" },
             { icon: Phone,      label: "Calls",     value: lead.callCount ?? 0,         color: "text-sky-400"    },
+            { icon: PhoneCall,  label: "Connected", value: lead.callConnected ?? 0,     color: "text-green-400"  },
+            { icon: PhoneOff,   label: "Not conn.", value: lead.callNotConnected ?? 0,  color: "text-orange-400" },
           ].map(({ icon: Icon, label, value, color }) => (
             <div key={label} className="flex flex-col items-center gap-1 rounded-xl border border-border/40 bg-muted/20 py-2.5">
               <Icon className={`h-4 w-4 ${color}`} />
@@ -673,12 +676,12 @@ interface KanbanCardProps {
   onAddPayment: (lead: Lead) => void;
   onAddReminder: (lead: Lead) => void;
   onAddNote: (lead: Lead) => void;
-  onCNC: (leadId: string) => void;
+  onCall: (lead: Lead) => void;
 }
 
 function KanbanCard({
   lead, columnStatus, canEdit,
-  onPreview, onEdit, onAddPayment, onAddReminder, onAddNote, onCNC,
+  onPreview, onEdit, onAddPayment, onAddReminder, onAddNote, onCall,
 }: KanbanCardProps) {
   const style = STATUS_STYLE[lead.status];
   const assignedName = getUserName(lead.assignedTo as User | string | null);
@@ -735,7 +738,7 @@ function KanbanCard({
                 onAddPayment={onAddPayment}
                 onAddReminder={onAddReminder}
                 onAddNote={onAddNote}
-                onCNC={onCNC}
+                onCall={onCall}
               />
             )}
           </div>
@@ -779,7 +782,7 @@ function KanbanCard({
           </div>
         )}
 
-        {/* Bottom — assigned + CNC */}
+        {/* Bottom — assigned + calls */}
         <div className="flex items-center justify-between gap-2 mt-1">
           {assignedName ? (
             <div className="flex items-center gap-1.5 min-w-0">
@@ -791,17 +794,24 @@ function KanbanCard({
           ) : (
             <span className="text-[11px] text-muted-foreground/40">Unassigned</span>
           )}
-          <div className="flex items-center gap-2 shrink-0">
-            {(lead.callNotConnected ?? 0) > 0 && (
-              <div className="flex items-center gap-0.5">
-                <PhoneOff className="h-3 w-3 text-orange-400" />
-                <span className="text-[11px] font-bold text-orange-400">{lead.callNotConnected}</span>
-              </div>
-            )}
+          {/* From 3CX: calls · connected · not connected */}
+          <div className="flex items-center gap-2 shrink-0" title="Calls from 3CX: all · connected · not connected">
             {(lead.callCount ?? 0) > 0 && (
               <div className="flex items-center gap-0.5">
                 <Phone className="h-3 w-3 text-sky-400" />
                 <span className="text-[11px] font-bold text-sky-400">{lead.callCount}</span>
+              </div>
+            )}
+            {(lead.callConnected ?? 0) > 0 && (
+              <div className="flex items-center gap-0.5">
+                <PhoneCall className="h-3 w-3 text-green-400" />
+                <span className="text-[11px] font-bold text-green-400">{lead.callConnected}</span>
+              </div>
+            )}
+            {(lead.callNotConnected ?? 0) > 0 && (
+              <div className="flex items-center gap-0.5">
+                <PhoneOff className="h-3 w-3 text-orange-400" />
+                <span className="text-[11px] font-bold text-orange-400">{lead.callNotConnected}</span>
               </div>
             )}
           </div>
@@ -823,12 +833,12 @@ interface KanbanColumnProps {
   onAddPayment: (lead: Lead) => void;
   onAddReminder: (lead: Lead) => void;
   onAddNote: (lead: Lead) => void;
-  onCNC: (leadId: string) => void;
+  onCall: (lead: Lead) => void;
 }
 
 function KanbanColumn({
   status, leads, localOverrides, canEdit,
-  onPreview, onEdit, onAddPayment, onAddReminder, onAddNote, onCNC,
+  onPreview, onEdit, onAddPayment, onAddReminder, onAddNote, onCall,
 }: KanbanColumnProps) {
   const style = STATUS_STYLE[status];
 
@@ -896,7 +906,7 @@ function KanbanColumn({
               onAddPayment={onAddPayment}
               onAddReminder={onAddReminder}
               onAddNote={onAddNote}
-              onCNC={onCNC}
+              onCall={onCall}
             />
           ))}
         </AnimatePresence>
@@ -957,7 +967,7 @@ export function KanbanBoard({ filters, canEdit }: KanbanBoardProps) {
   const [closeLead, setCloseLead] = useState<Lead | null>(null);
 
   const { mutate: updateStatus, isPending: statusPending } = useUpdateLeadStatus();
-  const { mutate: updateCNC }    = useUpdateCallNotConnected();
+  const callFlow = useCallFlow();
 
   const { data, isLoading } = useLeads({ ...filters, page: 1, limit: 500 });
   const allLeads = data?.data ?? [];
@@ -1041,9 +1051,10 @@ export function KanbanBoard({ filters, canEdit }: KanbanBoardProps) {
     }
   }
 
-  const handleCNC = useCallback((leadId: string) => {
-    updateCNC({ leadId, action: "increment" });
-  }, [updateCNC]);
+  // Call (2026-10-12): the "CNC +1" counter is gone — counts come from 3CX; this places the call (3CX or phone).
+  const handleCall = useCallback((lead: Lead) => {
+    if (lead.phone) callFlow?.chooseCall({ leadId: lead._id, leadName: lead.name, phone: lead.phone });
+  }, [callFlow]);
 
   if (isLoading) {
     return (
@@ -1105,7 +1116,7 @@ export function KanbanBoard({ filters, canEdit }: KanbanBoardProps) {
                   onAddPayment={setPaymentLead}
                   onAddReminder={setReminderLead}
                   onAddNote={setNoteLead}
-                  onCNC={handleCNC}
+                  onCall={handleCall}
                 />
               </motion.div>
             ))}
