@@ -841,3 +841,9 @@ dialogs (follow-up date and time, the enrolment for a close, the reason for lost
 saved on the lead. It can be put aside with Later and comes back after a reload. A lead's Calls / Connected / Not
 connected now come from 3CX (no more typed counters) — on the lead page, the leads table and the kanban cards. The
 Leaderboard counts 3CX calls, connected calls and talk time, and can be ranked by calls or talk time.
+
+## Exact money figures (2026-10-13)
+
+- **Where**: Reports (KPI cards, rankings, leaderboards, Top Revenue Earners, tables, chart tooltips) and the team page (revenue cards, member revenue)
+- **What**: the whole amount — "$2,250", "$71,570.25" — where it used to be shortened to one decimal ("$2.3K"). Only chart axes stay short ("$1.5K"), being the scale, not a figure. At most two decimals (`fmtFull`).
+- **Cards**: the figure sits on its own line under the title and icon, a size smaller when long, so the whole amount fits on a phone (`KpiCard` on Reports, `MoneyFigure` on the team page)

@@ -1173,3 +1173,8 @@ stays in the corner. "Don't log" drops it. Only for calls started here, and only
 ### Leaderboard page / DashboardLeaderboardCard (updated 2026-10-12)
 - Rank by Revenue (as before) / Calls / Talk time; the page adds Calls, Connected and Talk time columns (3CX calls by
   whoever took them); the card shows Calls + Talk time when ranked by them.
+
+### Change log — 2026-10-13 (exact money figures)
+- `lib/currency.ts` — `fmtFull` caps at two decimals and reads a missing amount as 0; `fmtCompact` is now only for chart axes.
+- `app/(dashboard)/reports/page.tsx` — `fmtUSD` is `fmtFull` (was `fmtCompact`); `KpiCard` puts the value on its own full-width line, smaller when long (> 7 / > 10 characters); the revenue chart's Y axis keeps `fmtCompact`.
+- `app/(dashboard)/teams/[teamId]/page.tsx` — `fmtUSD` is `fmtFull`; new local `MoneyFigure` for the Total Received / Total Pending / Avg per Lead cards; the Y axis keeps `fmtCompact`.
