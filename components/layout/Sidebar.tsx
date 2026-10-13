@@ -28,6 +28,7 @@ import {
   Coins,
   Wallet,
   Trophy,
+  HandCoins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -45,6 +46,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { toast } from "@/lib/toast";
 import { useUserLeadStats } from "@/hooks/useLeads";
 import { useMyReminderCount } from "@/hooks/useReminders";
+import { useBalanceDueCount } from "@/hooks/useBalancePayments";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSocket } from "@/lib/socket";
 
@@ -61,6 +63,8 @@ export const navItems: { href: string; label: string; icon: React.ElementType; p
   { href: "/users",     label: "Users",              icon: Users,           permModule: "users"     },
   { href: "/closings", label: "Daily Closings",     icon: CalendarCheck,   permModule: "closings"  },
   { href: "/enrolments",label: "My Enrolments",      icon: Receipt,         permModule: "enrolments" },
+  /* Part-paid closes and their next payments, for finance to approve (2026-10-13); the number is what is overdue or due in 3 days. */
+  { href: "/balance-payments", label: "Balance payments", icon: HandCoins, permModule: "balancePayments" },
   /* Commission, Leaderboard, Mentors and My Pay were open to everyone and stay open to
      every role until its box is unticked on the Roles screen (2026-10-07).
      Commission and My Pay: the server narrows each person to their own, their team's
@@ -86,6 +90,7 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
   const { data: myStats } = useUserLeadStats(userId);
   const newLeadsCount = myStats?.assigned ?? 0;
   const { data: reminderCount = 0 } = useMyReminderCount();
+  const { data: balanceDue = 0 } = useBalanceDueCount(useAuthStore((st) => st.hasPermission)("balancePayments", "view"));
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -113,7 +118,7 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
       {navItems.map(({ href, label, icon: Icon, permModule }) => {
         const isActive = pathname === href || pathname.startsWith(href + "/");
         const allowed = permModule === null ? true : hasPermission(permModule ?? href.split("/")[1], "view");
-        const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : 0;
+        const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : href === "/balance-payments" ? balanceDue : 0;
         const showBadge = badgeCount > 0;
 
         const linkEl = (
