@@ -253,7 +253,7 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
       prev.map((r) =>
         r.collectedBefore
           ? { ...r, rateInput: "" }
-          : { ...r, amountInput: "", aedInput: "", rateInput: "", paidInAed: false },
+          : { ...r, amountInput: "", aedInput: "", inrInput: "", rateInput: "", paidInAed: false, paidInInr: false },
       ),
     );
   }
@@ -295,7 +295,8 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
         if (row.collectedBefore || row.addedToLead) continue;
         await addPayment.mutateAsync({
           amount: rowAmount(row),
-          note: `Collected at enrolment${pickedCourse ? ` — ${pickedCourse.name}` : ""} · ${PAYMENT_METHOD_LABELS[row.method as EnrolmentPaymentMethod] ?? row.method}`,
+          note: `Collected at enrolment${pickedCourse ? ` — ${pickedCourse.name}` : ""} · ${PAYMENT_METHOD_LABELS[row.method as EnrolmentPaymentMethod] ?? row.method}${
+            row.paidInInr ? ` · paid ₹${Number(row.inrInput || 0).toLocaleString("en-US")} at 1 AED = ₹${row.rateInput}` : ""}`,
           paidAt: new Date(enrollmentDate).toISOString(),
         });
         setPaymentRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, addedToLead: true } : r)));

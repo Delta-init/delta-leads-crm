@@ -157,6 +157,8 @@ export type EnrolmentLanguage = (typeof ENROLMENT_LANGUAGES)[number];
 export const ENROLMENT_PAYMENT_METHODS = [
   "cash", "bank_transfer", "cheque", "card",
   "easebuzz_emi", "tabby", "tamara", "billexpro",
+  // Rupees into the INR account (the user, 2026-10-13) — finance's "INR Bank Account".
+  "inr_bank_account",
 ] as const;
 export type EnrolmentPaymentMethod = (typeof ENROLMENT_PAYMENT_METHODS)[number];
 
@@ -169,6 +171,7 @@ export const PAYMENT_METHOD_LABELS: Record<EnrolmentPaymentMethod, string> = {
   tabby: "Tabby",
   tamara: "Tamara",
   billexpro: "BillExPro",
+  inr_bank_account: "INR Transfer",
 };
 
 /** A receipt, once it is in storage. */
@@ -195,10 +198,13 @@ export interface StudentPayment {
   original?: PaymentOriginal;
 }
 
-/** A payment taken in AED on a Bangalore close. */
+/**
+ * A payment handed over in the other currency: AED on a Bangalore close, or INR on a Dubai one
+ * (the user, 2026-10-13). `rate` is how much of the close's currency one unit of it bought —
+ * INR for 1 AED, or AED for 1 INR.
+ */
 export interface PaymentOriginal {
-  currency: "AED";
+  currency: "AED" | "INR";
   amount: number;
-  /** INR for 1 AED. */
   rate: number;
 }

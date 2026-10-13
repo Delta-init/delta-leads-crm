@@ -16,7 +16,7 @@ import { fmtAcademy } from "@/lib/currency";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useCorrectEnrolment, useEnrolmentCorrection, type EnrolmentCorrectionStart } from "@/hooks/useEnrolments";
 import { useClientEmailCheck } from "@/hooks/useStudents";
-import { PaymentRowsEditor, missingInRows, newPaymentRow, rowAmount, rowOriginal, type PaymentRow } from "@/components/students/PaymentRowsEditor";
+import { PaymentRowsEditor, inrRowFields, missingInRows, newPaymentRow, rowAmount, rowOriginal, type PaymentRow } from "@/components/students/PaymentRowsEditor";
 import { AcademyBadge } from "@/components/students/AcademyBadge";
 import { bangalorePriceOf, type Course } from "@/types/course";
 import type { FeeStatus, Student, StudentPayment } from "@/types/student";
@@ -61,7 +61,7 @@ function startingRows(s: Student, ownOnLead: number): PaymentRow[] {
       method: p.method,
       amountInput: String(p.amount),
       receipt: p.receipt ?? null,
-      ...(p.original ? { paidInAed: true, aedInput: String(p.original.amount), rateInput: rate(p) } : {}),
+      ...(p.original?.currency === "INR" ? inrRowFields(p.original) : p.original ? { paidInAed: true, aedInput: String(p.original.amount), rateInput: rate(p) } : {}),
     })));
   } else if (!listed.length) {
     const rest = Math.round(((s.paidAmount ?? 0) - ownOnLead) * 100) / 100;

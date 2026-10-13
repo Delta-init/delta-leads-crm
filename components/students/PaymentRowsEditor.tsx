@@ -21,6 +21,11 @@ import { ENROLMENT_PAYMENT_METHODS, PAYMENT_METHOD_LABELS, type Academy, type Pa
  * payment taken in dirhams says so — "paid in AED", the AED and the rate (1 AED
  * = ₹ how much) — and comes to its rupees from them; finance gets both. The
  * money already on the lead is AED, so there it always asks for the rate.
+ *
+ * A Dubai close's payment can be handed over in rupees (the user, 2026-10-13):
+ * AED by default, INR picked — or "INR Transfer" as the method, which picks it —
+ * with the rupees and the same rate, 1 AED = ₹ how much; its AED is worked out
+ * from them. Finance gets the rupees and the rate (1 INR = so many AED).
  */
 
 export interface PaymentRow {
@@ -35,6 +40,10 @@ export interface PaymentRow {
   /** Bangalore: taken in AED — `aedInput` at `rateInput` (INR for 1 AED) is its rupees. */
   paidInAed?: boolean;
   aedInput?: string;
+  /** Dubai: taken in rupees — `inrInput` at `rateInput` (INR for 1 AED) is its AED. */
+  paidInInr?: boolean;
+  inrInput?: string;
+  /** INR for 1 AED, either way. */
   rateInput?: string;
   uploading?: boolean;
   uploadError?: string;
@@ -55,6 +64,11 @@ const num = (v?: string) => Math.max(0, Number(v) || 0);
 
 /** Taken in AED on a Bangalore close: the lead's own money (AED, always), or a row marked so. */
 const inAed = (r: PaymentRow, academy: Academy) => academy === "bangalore" && Boolean(r.collectedBefore || r.paidInAed);
+/** Taken in rupees on a Dubai close — never the lead's own money, which is AED. */
+const inInr = (r: PaymentRow, academy: Academy) => academy !== "bangalore" && !r.collectedBefore && Boolean(r.paidInInr);
+/** The other currency a row was handed over in, if it was. */
+export const rowForeignCurrency = (r: PaymentRow, academy: Academy = "dubai"): "AED" | "INR" | null =>
+  inAed(r, academy) ? "AED" : inInr(r, academy) ? "INR" : null;
 
 /** The AED a Bangalore row was taken in — the lead's own money is in `amountInput`, AED as on the lead. */
 export const rowAed = (r: PaymentRow, academy: Academy = "dubai") =>
@@ -62,11 +76,27 @@ export const rowAed = (r: PaymentRow, academy: Academy = "dubai") =>
 
 /** A row's amount in the close's currency — on a Bangalore close, the rupees an AED payment came to. */
 export const rowAmount = (r: PaymentRow, academy: Academy = "dubai") =>
-  inAed(r, academy) ? Math.round(rowAed(r, academy) * num(r.rateInput) * 100) / 100 : num(r.amountInput);
+  inAed(r, academy) ? Math.round(rowAed(r, academy) * num(r.rateInput) * 100) / 100
+  : inInr(r, academy) ? (num(r.rateInput) > 0 ? Math.round((num(r.inrInput) / num(r.rateInput)) * 100) / 100 : 0)
+  : num(r.amountInput);
 
-/** What finance is told of a payment taken in AED on a Bangalore close; nothing otherwise. */
+/**
+ * What finance is told of a payment taken in the other currency; nothing otherwise. Its rate is
+ * how much of the close's currency one unit bought: INR for 1 AED on a Bangalore close, AED for
+ * 1 INR on a Dubai one (the inverse of the "1 AED = ₹" typed).
+ */
 export const rowOriginal = (r: PaymentRow, academy: Academy = "dubai"): PaymentOriginal | undefined =>
-  inAed(r, academy) ? { currency: "AED", amount: rowAed(r, academy), rate: num(r.rateInput) } : undefined;
+  inAed(r, academy) ? { currency: "AED", amount: rowAed(r, academy), rate: num(r.rateInput) }
+  : inInr(r, academy) && num(r.rateInput) > 0 ? { currency: "INR", amount: num(r.inrInput), rate: Number((1 / num(r.rateInput)).toPrecision(12)) }
+  : undefined;
+
+/** A Dubai row given back for correcting: rupees and the rate as typed (1 AED = ₹), from what was stored. */
+export const inrRowFields = (o: PaymentOriginal): Partial<PaymentRow> =>
+  ({ paidInInr: true, inrInput: String(o.amount), rateInput: String(Number((1 / o.rate).toPrecision(8))) });
+
+/** "INR Transfer" is rupees: picking it on a Dubai close picks INR for the row. */
+const methodPatch = (method: string, academy: Academy): Partial<PaymentRow> =>
+  method === "inr_bank_account" ? (academy === "bangalore" ? { method, paidInAed: false } : { method, paidInInr: true }) : { method };
 
 /** What each payment still needs, the way the close's "Still needed" line says it. */
 export function missingInRows(rows: PaymentRow[], academy: Academy = "dubai"): string[] {
@@ -79,6 +109,8 @@ export function missingInRows(rows: PaymentRow[], academy: Academy = "dubai"): s
       !aed && !r.collectedBefore && !(rowAmount(r, academy) > 0) && (one ? "the amount paid" : `${whose} amount`),
       aed && !r.collectedBefore && !(rowAed(r, academy) > 0) && (one ? "the amount paid in AED" : `${whose} AED amount`),
       aed && !(num(r.rateInput) > 0) && (one ? "the AED rate" : `${whose} AED rate`),
+      inInr(r, academy) && !(num(r.inrInput) > 0) && (one ? "the amount paid in INR" : `${whose} INR amount`),
+      inInr(r, academy) && !(num(r.rateInput) > 0) && (one ? "the INR rate" : `${whose} INR rate`),
       !r.receipt && (one ? "payment receipt" : `${whose} receipt`),
     ].filter(Boolean) as string[];
   });
@@ -123,7 +155,7 @@ export function PaymentRowsEditor({ leadId, rows, onChange, academy = "dubai" }:
           >
             <div className="flex items-center gap-2">
               <span className="w-5 shrink-0 text-[10px] font-semibold text-muted-foreground">{i + 1}.</span>
-              <Select value={r.method} onValueChange={(v) => update(r.id, { method: v })}>
+              <Select value={r.method} onValueChange={(v) => update(r.id, methodPatch(v, academy))}>
                 <SelectTrigger className="h-8 w-[130px] shrink-0 text-xs" aria-label={`Payment ${i + 1} method`}>
                   <SelectValue placeholder="Paid by…" />
                 </SelectTrigger>
@@ -139,6 +171,13 @@ export function PaymentRowsEditor({ leadId, rows, onChange, academy = "dubai" }:
                   <span className="font-semibold text-foreground">{bangalore ? fmtAED(rowAed(r, academy)) : money(rowAmount(r))}</span>
                   <span className="ml-1.5 text-[10px] text-muted-foreground">already on the lead</span>
                 </div>
+              ) : !bangalore && r.paidInInr ? (
+                <Input
+                  type="number" min="0" step="0.01" value={r.inrInput ?? ""}
+                  onChange={(e) => update(r.id, { inrInput: e.target.value })}
+                  placeholder="Paid in INR (₹)" className="h-8 flex-1 text-xs"
+                  aria-label={`Payment ${i + 1} amount in INR`}
+                />
               ) : bangalore && r.paidInAed ? (
                 <Input
                   type="number" min="0" step="0.01" value={r.aedInput ?? ""}
@@ -150,9 +189,25 @@ export function PaymentRowsEditor({ leadId, rows, onChange, academy = "dubai" }:
                 <Input
                   type="number" min="0" step="0.01" value={r.amountInput}
                   onChange={(e) => update(r.id, { amountInput: e.target.value })}
-                  placeholder={bangalore ? "Amount (₹)" : "Amount"} className="h-8 flex-1 text-xs"
+                  placeholder={bangalore ? "Amount (₹)" : "Amount (AED)"} className="h-8 flex-1 text-xs"
                   aria-label={`Payment ${i + 1} amount`}
                 />
+              )}
+              {!r.collectedBefore && (
+                // The currency it was handed over in: the close's own by default, or the other one.
+                <Select
+                  value={bangalore ? (r.paidInAed ? "AED" : "INR") : r.paidInInr ? "INR" : "AED"}
+                  onValueChange={(v) => update(r.id, bangalore ? { paidInAed: v === "AED" } : { paidInInr: v === "INR" })}
+                >
+                  <SelectTrigger className="h-8 w-[72px] shrink-0 text-xs" aria-label={`Payment ${i + 1} currency`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(bangalore ? ["INR", "AED"] : ["AED", "INR"]).map((c) => (
+                      <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
               {!r.collectedBefore && removable && (
                 <motion.button
@@ -166,33 +221,30 @@ export function PaymentRowsEditor({ leadId, rows, onChange, academy = "dubai" }:
                 </motion.button>
               )}
             </div>
-            {/* Bangalore: rupees, or AED at a rate — the lead's own money always at a rate. */}
-            {bangalore && (
+            {/* Dubai: AED, or rupees at a rate (1 AED = ₹ how much), worked out to AED. */}
+            {!bangalore && r.paidInInr && !r.collectedBefore && (
               <div className="flex flex-wrap items-center gap-2 pl-7">
-                {!r.collectedBefore && (
-                  <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      className="h-3.5 w-3.5 accent-primary"
-                      checked={Boolean(r.paidInAed)}
-                      onChange={(e) => update(r.id, { paidInAed: e.target.checked })}
-                      aria-label={`Payment ${i + 1} paid in AED`}
-                    />
-                    Paid in AED
-                  </label>
-                )}
-                {(r.collectedBefore || r.paidInAed) && (
-                  <>
-                    <span className="text-[11px] text-muted-foreground">1 AED = ₹</span>
-                    <Input
-                      type="number" min="0" step="0.0001" value={r.rateInput ?? ""}
-                      onChange={(e) => update(r.id, { rateInput: e.target.value })}
-                      placeholder="rate" className="h-7 w-20 text-xs"
-                      aria-label={`Payment ${i + 1} rate, rupees for one dirham`}
-                    />
-                    <span className="text-[11px] font-medium text-foreground">= {money(rowAmount(r, academy))}</span>
-                  </>
-                )}
+                <span className="text-[11px] text-muted-foreground">1 AED = ₹</span>
+                <Input
+                  type="number" min="0" step="0.0001" value={r.rateInput ?? ""}
+                  onChange={(e) => update(r.id, { rateInput: e.target.value })}
+                  placeholder="rate" className="h-7 w-20 text-xs"
+                  aria-label={`Payment ${i + 1} rate, rupees for one dirham`}
+                />
+                <span className="text-[11px] font-medium text-foreground">= {money(rowAmount(r, academy))}</span>
+              </div>
+            )}
+            {/* Bangalore: rupees, or AED at a rate — the lead's own money always at a rate. */}
+            {bangalore && (r.collectedBefore || r.paidInAed) && (
+              <div className="flex flex-wrap items-center gap-2 pl-7">
+                <span className="text-[11px] text-muted-foreground">1 AED = ₹</span>
+                <Input
+                  type="number" min="0" step="0.0001" value={r.rateInput ?? ""}
+                  onChange={(e) => update(r.id, { rateInput: e.target.value })}
+                  placeholder="rate" className="h-7 w-20 text-xs"
+                  aria-label={`Payment ${i + 1} rate, rupees for one dirham`}
+                />
+                <span className="text-[11px] font-medium text-foreground">= {money(rowAmount(r, academy))}</span>
               </div>
             )}
             {r.receipt ? (
