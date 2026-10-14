@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, BellOff, X, CheckCircle2, UserCheck,
   MessageCircle, StickyNote, ExternalLink, Loader2,
+  ArrowRightLeft, AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,10 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { toast } from "@/lib/toast";
 import { playAlertSound } from "@/lib/alertTone";
 import { NotificationTests } from "@/components/notifications/NotificationTests";
+import {
+  useNotifications, useMarkAllNotificationsRead, useDeleteNotification, useClearNotifications,
+} from "@/hooks/useNotifications";
+import type { AppNotificationDTO } from "@/types/notification";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -32,13 +37,29 @@ interface AppNotification {
   url?: string;
   createdAt: string;
   read: boolean;
+  /** Kept on the server (it has a stored id): reading, dismissing and clearing it stick (2026-10-15). */
+  stored?: boolean;
 }
+
+/** Newest first, one of each id, at most 50. */
+function mergeNotifications(a: AppNotification[], b: AppNotification[]): AppNotification[] {
+  const byId = new Map<string, AppNotification>();
+  for (const n of [...a, ...b]) if (!byId.has(n.id)) byId.set(n.id, n);
+  return Array.from(byId.values())
+    .sort((x, y) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime())
+    .slice(0, 50);
+}
+
+const fromStored = (n: AppNotificationDTO): AppNotification => ({ ...n, url: n.url || undefined, stored: true });
 
 const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   lead_assigned:  { icon: UserCheck,     color: "text-teal-400",   bg: "bg-teal-500/15"   },
   team_message:   { icon: MessageCircle, color: "text-blue-400",   bg: "bg-blue-500/15"   },
   status_changed: { icon: CheckCircle2,  color: "text-violet-400", bg: "bg-violet-500/15" },
   note_added:     { icon: StickyNote,    color: "text-green-400",  bg: "bg-green-500/15"  },
+  inactive_lead_moved:  { icon: ArrowRightLeft, color: "text-amber-400", bg: "bg-amber-500/15" },
+  inactive_leads_moved: { icon: ArrowRightLeft, color: "text-amber-400", bg: "bg-amber-500/15" },
+  inactive_leads_stuck: { icon: AlertTriangle,  color: "text-red-400",   bg: "bg-red-500/15"   },
 };
 const DEFAULT_TYPE = { icon: Bell, color: "text-primary", bg: "bg-primary/15" };
 
@@ -239,8 +260,28 @@ export function NotificationBell() {
   const { accessToken } = useAuthStore();
   const { permission, isSubscribed, isLoading: pushLoading, requestPermission } = usePushNotification();
   const isMobile = useIsMobile();
+  const { data: storedList } = useNotifications(Boolean(accessToken));
+  const markAllStoredRead = useMarkAllNotificationsRead();
+  const deleteStored = useDeleteNotification();
+  const clearStored = useClearNotifications();
 
   const unread = notifications.filter((n) => !n.read).length;
+
+  // ── What the server kept: loaded on sign-in and after every change ─────────
+  useEffect(() => {
+    if (!storedList) return;
+    const stored = storedList.items.map(fromStored);
+    const known = new Set(stored.map((n) => n.id));
+    const newest = stored.reduce((t, n) => Math.max(t, new Date(n.createdAt).getTime()), 0);
+    // Live-only notices (older events that are not stored) stay; stored ones are replaced by the server's copy —
+    // except one that came on the socket after this list was read, which the list can't have yet.
+    setNotifications((prev) =>
+      mergeNotifications(
+        stored,
+        prev.filter((n) => !n.stored || (!known.has(n.id) && new Date(n.createdAt).getTime() > newest))
+      )
+    );
+  }, [storedList]);
 
   // ── Show push permission banner if not yet granted ────────────────────────
   useEffect(() => {
@@ -259,19 +300,21 @@ export function NotificationBell() {
     const socket = getSocket(accessToken);
 
     const handler = (
-      payload: Omit<AppNotification, "id" | "read" | "type"> & { type?: string; data?: { type?: string } },
+      payload: Omit<AppNotification, "id" | "read" | "type"> & { id?: string; type?: string; data?: { type?: string } },
     ) => {
       const notif: AppNotification = {
         ...payload,
-        // the server puts the type inside `data`
+        // the server puts the type inside `data` (a stored notice carries it at the top)
         type: payload.type ?? payload.data?.type ?? "",
-        id: `${Date.now()}-${Math.random()}`,
+        // Stored notices arrive with their id; older live-only events get one made up here.
+        id: payload.id ?? `${Date.now()}-${Math.random()}`,
         read: false,
+        stored: Boolean(payload.id),
       };
       const isLead = notif.type === "lead_assigned";
       // The new-lead sound for a lead; the other sound for anything else.
       playAlertSound(isLead ? "lead" : "other");
-      setNotifications((prev) => [notif, ...prev].slice(0, 50));
+      setNotifications((prev) => mergeNotifications([notif], prev));
       toast(notif.title, {
         description: notif.body,
         duration: isLead ? 15000 : 5000,
@@ -303,14 +346,20 @@ export function NotificationBell() {
   }, [open, isMobile]);
 
   const markAllRead = useCallback(() => {
+    if (notifications.some((n) => n.stored && !n.read)) markAllStoredRead.mutate();
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  }, []);
+  }, [notifications, markAllStoredRead]);
 
   const dismiss = useCallback((id: string) => {
+    const target = notifications.find((n) => n.id === id);
+    if (target?.stored) deleteStored.mutate(id);
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+  }, [notifications, deleteStored]);
 
-  const clearAll = useCallback(() => setNotifications([]), []);
+  const clearAll = useCallback(() => {
+    if (notifications.some((n) => n.stored)) clearStored.mutate();
+    setNotifications([]);
+  }, [notifications, clearStored]);
 
   const handleOpen = useCallback(() => {
     setOpen((v) => !v);

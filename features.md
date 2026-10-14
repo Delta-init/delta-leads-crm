@@ -859,3 +859,23 @@ Leaderboard counts 3CX calls, connected calls and talk time, and can be ranked b
 - **Programmes** (Super Admin, next to Export PDF): every lead source and course with a programme picker — rows not
   yet saved start from a suggestion (a source from its name, a course from its LMS courses), marked "suggested";
   "Save N changes".
+
+## Inactive leads (2026-10-15)
+
+- **Where**: sidebar → Inactive Leads (the "Inactive Leads" box in Roles — the Super Admin only until a role is given
+  it: view to look, edit to move); Settings → Automation & alerts (Settings view to see it, edit to change it); the bell.
+- **What**: leads whose owner hasn't acted within the limit (45 min of working time by default) — who has them, how
+  long they've waited, what the automatic mover will do (Moves automatically / Moves when work starts / By hand only /
+  Nobody left / No team / Automatic off), who lost them before. Search, team and owner (tap a name) filters; tick some
+  or one → Move: next in their team (each team's own split rule) or a person picked. Moves log: every move, automatic
+  or by whom. Refreshes every minute and when a move happens.
+- **Phones and tablets**: a card per lead and per move instead of the tables (tables from 1024 px); why a lead won't
+  move on its own (by hand only, nobody left, no team) and who lost it before written out on the cards.
+- **Its own lists**: the team filter and the Move dialog's people come from the page's own endpoints, so a role given
+  only the Inactive Leads box needs no Teams or Users box; moving the last leads off a page steps back a page.
+- **Settings card**: the switch (off until switched on; only leads assigned from then on move automatically), the
+  limit (hours and minutes), working days, hours and time zone; read-only without Settings edit; not shown without
+  Settings view.
+- **Bell**: stored notices — a lead moved away from you or to you; for the Super Admins, moves and leads nobody is left
+  to take — still there after a reload; read, dismiss and clear stick.
+- **Lead page**: a move the CRM made shows "by System".

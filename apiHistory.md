@@ -1500,3 +1500,18 @@ lead page; the QC pages still use `useCalls.ts`.
 - `useProgramTags(enabled)` — `GET /reports/programs/tags` (Super Admin).
 - `useSaveProgramTags()` — `PUT /reports/programs/tags`; invalidates `["reports"]`.
 - `REPORT_PROGRAMS`, types `ReportProgram`, `ReportProgramSummary`, `ProgramSourceRow`, `ProgramCourseRow`, `ProgramTags`.
+
+### Inactive leads, stored notifications, the CRM's settings (2026-10-15)
+- `useInactiveLeads(filters, enabled)` — `GET /inactive-leads` → `{ items, summary, rule, pagination }`, every 60 s;
+  `useLeadMoves(filters, enabled)` — `GET /inactive-leads/moves`; `useReassignInactiveLeads()` —
+  `POST /inactive-leads/reassign` (toasts moved / skipped; invalidates `["inactive-leads"]` and `["leads"]`);
+  `INACTIVE_LEADS_KEY`.
+- `useInactiveLeadTeams(enabled)` — `GET /inactive-leads/teams` (the page's filter); `useMovePeople(search, enabled)` —
+  `GET /inactive-leads/people` (the Move dialog, only while it is open on "A person I choose"). Types `FilterTeam`,
+  `MovePerson`.
+- `useAppSettings(enabled)` — `GET /settings/app`; `useUpdateAppSettings()` — `PUT /settings/app`; `APP_SETTINGS_KEY`.
+- `useNotifications(enabled)` — `GET /notifications`; `useMarkAllNotificationsRead()`, `useDeleteNotification()`,
+  `useClearNotifications()`.
+- Types: `types/inactiveLeads.ts`, `types/settings.ts` (no email), `types/notification.ts`; `CRM_MODULES` gains
+  `"inactive-leads"` (+ `MODULE_LABELS`); `ActivityAction` gains `"inactive_reassigned"`; an activity's `performedBy`
+  may be null (the CRM did it).

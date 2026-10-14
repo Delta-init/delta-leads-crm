@@ -41,6 +41,8 @@ export const CRM_MODULES = [
   "calls",
   /* Balance payments (2026-10-13): part-paid closes and the next payment, for finance to approve. Open by default. */
   "balancePayments",
+  /* Inactive leads (2026-10-15): view the page, edit to move leads on. The Super Admin's until given. */
+  "inactive-leads",
 ] as const;
 
 export type CrmModule = (typeof CRM_MODULES)[number];
@@ -65,6 +67,7 @@ export const MODULE_LABELS: Record<CrmModule, string> = {
   pay: "My Pay",
   calls: "Calls (3CX)",
   balancePayments: "Balance payments",
+  "inactive-leads": "Inactive Leads",
 };
 
 

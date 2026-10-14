@@ -1188,3 +1188,21 @@ stays in the corner. "Don't log" drops it. Only for calls started here, and only
   content wrapped in `ReportProgramContext.Provider`; what-counts line / nothing-tagged warning; Programmes button for
   `canEdit`; Export PDF gets the programme.
 - `components/reports/ExportPdfDialog.tsx` — `program` prop (overall export only).
+
+### Change log — 2026-10-15 (inactive leads)
+- `app/(dashboard)/inactive-leads/page.tsx` (new) — stats, Inactive now / Moves log, filters; tables from `lg`, cards
+  below (`LeadCard`, `MoveCard`: why it won't move on its own and who lost it before written out); long names clamp to
+  two lines in the table; `HowBadge` (`compact` on cards); the team filter from `useInactiveLeadTeams`; an emptied last
+  page steps back; an unknown state shows as itself; the tab bar scrolls inside itself; ticking and Move only with the
+  box's edit; no page padding of its own (the layout's `<main>` has it).
+- `components/inactive-leads/MoveLeadsDialog.tsx` (new) — `ResponsiveDialog` (a drawer on phones): next in their team /
+  a person (`useMovePeople`, searchable, asked for only while open on it; the current owner can't be picked).
+- `components/settings/AutomationSettingsCard.tsx` (new) — on the Settings page; renders nothing without Settings view.
+- `components/shared/StatCard.tsx`, `Pager.tsx`, `ListStates.tsx` (`EmptyState`, `ErrorState`, `TableSkeleton`),
+  `lib/animations.ts` (new, as in the Remote CRM) — a StatCard fills its grid cell, so a row of them is one height.
+- `components/notifications/NotificationBell.tsx` — merges the stored notices (`stored`), keeping one that came on the
+  socket after the list was read; types `inactive_lead_moved`, `inactive_leads_moved`, `inactive_leads_stuck`; read /
+  dismiss / clear also on the server.
+- `components/layout/Sidebar.tsx` — Inactive Leads (`Hourglass`, `permModule: "inactive-leads"`); the new-leads count
+  refreshes on a stored notice too (its type at the top) and on a lead moved away.
+- `app/(dashboard)/leads/[leadId]/page.tsx` — `inactive_reassigned` in the activity log; "by System" with no person.

@@ -48,6 +48,39 @@ What was changed.
 
 ## 🔔 Notifications & Browser APIs
 
+### Reading a notice's type only from `data`
+- **Date**: 2026-10-15
+- **Category**: notifications
+
+**What happened**:
+The sidebar's new-leads count refreshed on `payload.data.type === "lead_assigned"`; the stored notices (`notify()`)
+carry the type at the top, so a lead moved to someone for inactivity left their count stale until a refocus.
+
+**Why it happened**:
+Two shapes on one socket event: the older senders put the type in `data`, the stored ones at the top.
+
+**Fix**:
+`const type = payload?.type ?? payload?.data?.type` wherever the event is read (the bell already did).
+
+**Rule — Never do this again**:
+> Read a "notification" event's type from the top first, then `data`.
+
+---
+
+### A list replaced wholesale by a refetch that started before a socket push
+- **Date**: 2026-10-15
+- **Category**: notifications
+
+**What happened**:
+The bell replaced every stored notice with the server's list; a notice that arrived on the socket while that list was
+in flight vanished until the next refetch.
+
+**Fix**:
+Keep a socket-arrived stored notice the list doesn't have when it is newer than the list's newest.
+
+**Rule — Never do this again**:
+> When merging a fetched list with pushed items, keep the pushed ones newer than the fetch.
+
 ### Android `new Notification()` Constructor Crash
 - **Date**: 2026-04-01
 - **Category**: notifications
@@ -203,6 +236,77 @@ function formatTime(iso: string) {
 
 ## 📦 Components
 
+### A page leaning on another module's API
+- **Date**: 2026-10-15
+- **Category**: components
+
+**What happened**:
+Inactive Leads took its team filter from `GET /teams` (Leads box) and the Move dialog its people from `GET /users`
+(Users box) — a role given only the Inactive Leads box got an empty filter and "Nobody matches". The dialog also
+asked for users on every page load while closed.
+
+**Fix**:
+The page's own `GET /inactive-leads/teams` (view) and `/people` (edit); the dialog asks only while open on it.
+
+**Rule — Never do this again**:
+> A page opened by its own permission gets what it needs from its own endpoints; a closed dialog fetches nothing.
+
+### A wide table switched to cards at `md` — too early beside the sidebar
+- **Date**: 2026-10-15
+- **Category**: tailwind
+
+**What happened**:
+The Inactive Leads page (from the Remote CRM) showed its 8-column table from 768 px — where this layout's sidebar
+already takes its share, leaving the table about 560 px: names wrapped onto three and four lines.
+
+**Why it happened**:
+The breakpoint was chosen for the screen, not for the space the table actually gets.
+
+**Fix**:
+Cards below `lg`, the table from `lg` (`lg:hidden` / `hidden lg:block`).
+
+**Rule — Never do this again**:
+> Pick a table's breakpoint by the width it gets beside the sidebar — 6+ columns: cards below `lg`.
+
+---
+
+### A page bringing its own padding into the dashboard layout
+- **Date**: 2026-10-15
+- **Category**: tailwind
+
+**What happened**:
+The Remote CRM's pages pad themselves (`p-4 sm:p-6`); here the layout's `<main>` already has `p-6`, so a phone got
+40 px gutters on each side.
+
+**Why it happened**:
+Copied from a CRM whose layout doesn't pad.
+
+**Fix**:
+The page's outer wrapper is `space-y-6` only, like every page here.
+
+**Rule — Never do this again**:
+> Pages in `(dashboard)` add no outer padding — `<main>` does it.
+
+---
+
+### A card on a page everyone can open, reading data only some may read
+- **Date**: 2026-10-15
+- **Category**: components
+
+**What happened**:
+The automation card went on the Settings page, which every signed-in person can open; its `GET /settings/app` needs
+Settings view, so everyone else would have seen "Could not load the automation settings."
+
+**Why it happened**:
+The card assumed whoever sees the page may read what it shows.
+
+**Fix**:
+The card checks `hasPermission("settings", "view")` (after mount — the sign-in comes from localStorage), passes it as
+the query's `enabled`, and renders nothing without it.
+
+**Rule — Never do this again**:
+> A card that reads a permission-guarded API checks that permission itself — the page it sits on may be open to all.
+
 ### Duplicate Delete Dialogs Across Modules
 - **Date**: 2026-04-01
 - **Category**: components
@@ -320,6 +424,23 @@ Replace all `style={{ ... }}` with equivalent Tailwind utility classes.
 
 ## 🌐 General / Other
 
+### The page's gate and the API's gate disagreeing
+- **Date**: 2026-10-15
+- **Category**: general
+
+**What happened**:
+The Remote CRM's Inactive Leads page opened only for the Super Admin, while its sidebar entry and its API go by the
+"inactive-leads" permission — a role given the box saw the entry and then "Only a super admin can see inactive leads."
+
+**Why it happened**:
+The page was written before the module existed, and kept its own Super Admin check.
+
+**Fix**:
+The page uses `hasPermission("inactive-leads", "view")` to open and `"edit"` to tick and move — the same as the routes.
+
+**Rule — Never do this again**:
+> A page gates on the same module and action as the API it calls; the Super Admin passes `hasPermission` anyway.
+
 ### No Input Validation for Future Time on Reminder Form
 - **Date**: 2026-04-01
 - **Category**: forms
@@ -344,5 +465,5 @@ No `min` attribute on `datetime-local` input, and no frontend validation.
 
 Copy the template at the top and place it at the **top** of the correct category section.
 
-**Entry count**: 9
+**Entry count**: 16
 *(Increment every time you add a mistake)*
