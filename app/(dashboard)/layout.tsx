@@ -9,6 +9,7 @@ import { useReminderNotifications } from "@/hooks/useReminderNotifications";
 import { RecentPageTracker } from "@/components/shared/CommandPalette";
 import { RootPortalHistoryBridge } from "@/components/shared/RootPortalHistoryBridge";
 import { CallFlowProvider } from "@/components/calls/CallFlow";
+import { SaleCelebration } from "@/components/shared/SaleCelebration";
 import api from "@/lib/axios";
 import type { AuthUser } from "@/types";
 
@@ -76,6 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-dvh overflow-hidden bg-slate-200 dark:bg-background pwa-safe-top">
       <RootPortalHistoryBridge />
       <RecentPageTracker />
+      <SaleCelebration />
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />

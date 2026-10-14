@@ -7,6 +7,7 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { LEAD_SOUNDS, playAlertSound } from "@/lib/alertTone";
 import { sendTestPush, showLocalTestNotification } from "@/hooks/usePushNotification";
+import { SaleAnnouncementControls } from "@/components/notifications/SaleAnnouncementControls";
 
 /*
  * Testing notifications from the bell (the user, 2026-10-05): whether this
@@ -111,6 +112,8 @@ export function NotificationTests({ isSubscribed, permission, pushLoading, reque
                 ))}
               </div>
             </div>
+
+            <SaleAnnouncementControls />
 
             {/* Browser and devices */}
             <div className="space-y-1">
