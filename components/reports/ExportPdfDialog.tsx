@@ -25,6 +25,8 @@ interface ExportPdfDialogProps {
   entityId?: string;
   entityName?: string;
   trigger?: React.ReactNode;
+  /** "overall" only: the Reports page's programme (forex | digital | jura) — that programme's leads only. */
+  program?: string;
 }
 
 // ── Period helpers ─────────────────────────────────────────────────────────────
@@ -64,6 +66,7 @@ export function ExportPdfDialog({
   entityId,
   entityName,
   trigger,
+  program,
 }: ExportPdfDialogProps) {
   const [open,        setOpen]        = useState(false);
   const [period,      setPeriod]      = useState<QuickPeriod>("month");
@@ -82,6 +85,7 @@ export function ExportPdfDialog({
     const p = new URLSearchParams();
     if (from) p.set("dateFrom", from);
     if (to)   p.set("dateTo",   to);
+    if (type === "overall" && program) p.set("program", program);
     const qs = p.toString() ? `?${p.toString()}` : "";
 
     switch (type) {

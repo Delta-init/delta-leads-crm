@@ -847,3 +847,15 @@ Leaderboard counts 3CX calls, connected calls and talk time, and can be ranked b
 - **Where**: Reports (KPI cards, rankings, leaderboards, Top Revenue Earners, tables, chart tooltips) and the team page (revenue cards, member revenue)
 - **What**: the whole amount — "$2,250", "$71,570.25" — where it used to be shortened to one decimal ("$2.3K"). Only chart axes stay short ("$1.5K"), being the scale, not a figure. At most two decimals (`fmtFull`).
 - **Cards**: the figure sits on its own line under the title and icon, a size smaller when long, so the whole amount fits on a phone (`KpiCard` on Reports, `MoneyFigure` on the team page)
+
+## Reports by programme (2026-10-15)
+
+- **Where**: Reports page — a row above the report tabs: All · Forex · Digital Academy · JURA (kept in the address,
+  `?program=`)
+- **What**: every report tab, and Export PDF, shows only that programme's leads. A lead counts under its lead
+  source's programme; when its source has none, under its course's. A line says what counts ("Forex: leads from the
+  2 lead sources tagged Forex, and leads from untagged sources on its 1 course"); with nothing tagged, a warning says
+  so.
+- **Programmes** (Super Admin, next to Export PDF): every lead source and course with a programme picker — rows not
+  yet saved start from a suggestion (a source from its name, a course from its LMS courses), marked "suggested";
+  "Save N changes".

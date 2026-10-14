@@ -1178,3 +1178,13 @@ stays in the corner. "Don't log" drops it. Only for calls started here, and only
 - `lib/currency.ts` — `fmtFull` caps at two decimals and reads a missing amount as 0; `fmtCompact` is now only for chart axes.
 - `app/(dashboard)/reports/page.tsx` — `fmtUSD` is `fmtFull` (was `fmtCompact`); `KpiCard` puts the value on its own full-width line, smaller when long (> 7 / > 10 characters); the revenue chart's Y axis keeps `fmtCompact`.
 - `app/(dashboard)/teams/[teamId]/page.tsx` — `fmtUSD` is `fmtFull`; new local `MoneyFigure` for the Total Received / Total Pending / Avg per Lead cards; the Y axis keeps `fmtCompact`.
+
+### Change log — 2026-10-15 (reports by programme)
+- `components/reports/ProgramTagsDialog.tsx` (new) — the Programmes screen: Lead sources / Courses (one list at a time,
+  so long names read in full), a native select per row (— None, Forex, Digital Academy, JURA), "suggested" / "changed"
+  badges, search, "Not saved yet", "Save N changes" (only the rows that differ from what is saved). Icon-only trigger
+  on phones.
+- `app/(dashboard)/reports/page.tsx` — programme row (`PROGRAM_TABS`) above the report tabs; `?program=`; the tab
+  content wrapped in `ReportProgramContext.Provider`; what-counts line / nothing-tagged warning; Programmes button for
+  `canEdit`; Export PDF gets the programme.
+- `components/reports/ExportPdfDialog.tsx` — `program` prop (overall export only).

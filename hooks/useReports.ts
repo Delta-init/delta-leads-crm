@@ -1,4 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { createContext, useContext } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/lib/toast";
 import api from "@/lib/axios";
 import type {
   OverviewReport,
@@ -22,13 +24,33 @@ interface ApiResponse<T> {
   message: string;
 }
 
+// ── Programme (2026-10-15) ────────────────────────────────────────────────────
+
+/** Forex, Digital Academy (digital marketing and AI) or JURA — the Reports page's programme tabs; null is "All". */
+export type ReportProgram = "forex" | "digital" | "jura";
+
+export const REPORT_PROGRAMS: { key: ReportProgram; label: string }[] = [
+  { key: "forex",   label: "Forex"           },
+  { key: "digital", label: "Digital Academy" },
+  { key: "jura",    label: "JURA"            },
+];
+
+/**
+ * The programme the Reports page is showing. Every report hook below adds it to its request (and its cache key), so
+ * each tab shows that programme's leads; outside the Reports page there is none and nothing changes.
+ */
+export const ReportProgramContext = createContext<ReportProgram | null>(null);
+export const useReportProgram = () => useContext(ReportProgramContext);
+
 // ── Overview ─────────────────────────────────────────────────────────────────
 
 export function useReportOverview(dateFrom: string, dateTo: string) {
+  const program = useReportProgram();
   return useQuery<OverviewReport>({
-    queryKey: ["reports", "overview", dateFrom, dateTo],
+    queryKey: ["reports", "overview", dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams();
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<OverviewReport>>(
@@ -47,10 +69,12 @@ export function useReportTimeline(
   dateFrom: string,
   dateTo: string,
 ) {
+  const program = useReportProgram();
   return useQuery<TimelinePoint[]>({
-    queryKey: ["reports", "timeline", period, dateFrom, dateTo],
+    queryKey: ["reports", "timeline", period, dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams({ period });
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<TimelinePoint[]>>(
@@ -66,10 +90,12 @@ export function useReportTimeline(
 
 /** Pass `teamId` to rank only that team's members, on that team's leads. */
 export function useReportUserRankings(dateFrom: string, dateTo: string, teamId?: string) {
+  const program = useReportProgram();
   return useQuery<UserRankItem[]>({
-    queryKey: ["reports", "users", dateFrom, dateTo, teamId ?? "all"],
+    queryKey: ["reports", "users", dateFrom, dateTo, teamId ?? "all", program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams({ limit: "50" });
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       if (teamId)   params.set("teamId",   teamId);
@@ -85,10 +111,12 @@ export function useReportUserRankings(dateFrom: string, dateTo: string, teamId?:
 // ── Team Rankings ─────────────────────────────────────────────────────────────
 
 export function useReportTeamRankings(dateFrom: string, dateTo: string) {
+  const program = useReportProgram();
   return useQuery<TeamRankItem[]>({
-    queryKey: ["reports", "teams", dateFrom, dateTo],
+    queryKey: ["reports", "teams", dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams();
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<TeamRankItem[]>>(
@@ -107,10 +135,12 @@ export function useReportTeamSplit(
   dateFrom: string,
   dateTo: string,
 ) {
+  const program = useReportProgram();
   return useQuery<TeamSplitReport>({
-    queryKey: ["reports", "team-split", period, dateFrom, dateTo],
+    queryKey: ["reports", "team-split", period, dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams({ period });
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<TeamSplitReport>>(
@@ -125,10 +155,12 @@ export function useReportTeamSplit(
 // ── Revenue Overview ──────────────────────────────────────────────────────────
 
 export function useRevenueOverview(dateFrom: string, dateTo: string) {
+  const program = useReportProgram();
   return useQuery<RevenueOverview>({
-    queryKey: ["reports", "revenue", "overview", dateFrom, dateTo],
+    queryKey: ["reports", "revenue", "overview", dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams();
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<RevenueOverview>>(
@@ -147,10 +179,12 @@ export function useRevenueTimeline(
   dateFrom: string,
   dateTo: string,
 ) {
+  const program = useReportProgram();
   return useQuery<RevenueTimelineReport>({
-    queryKey: ["reports", "revenue", "timeline", period, dateFrom, dateTo],
+    queryKey: ["reports", "revenue", "timeline", period, dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams({ period });
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<RevenueTimelineReport>>(
@@ -165,10 +199,12 @@ export function useRevenueTimeline(
 // ── Source Analytics ──────────────────────────────────────────────────────────
 
 export function useSourceAnalytics(dateFrom: string, dateTo: string, teamId?: string) {
+  const program = useReportProgram();
   return useQuery<SourceAnalyticsItem[]>({
-    queryKey: ["reports", "sources", dateFrom, dateTo, teamId],
+    queryKey: ["reports", "sources", dateFrom, dateTo, teamId, program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams();
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       if (teamId)   params.set("team",     teamId);
@@ -182,10 +218,12 @@ export function useSourceAnalytics(dateFrom: string, dateTo: string, teamId?: st
 }
 
 export function useCampaignBreakdown(source: string, dateFrom: string, dateTo: string) {
+  const program = useReportProgram();
   return useQuery<CampaignBreakdownItem[]>({
-    queryKey: ["reports", "sources", source, "campaigns", dateFrom, dateTo],
+    queryKey: ["reports", "sources", source, "campaigns", dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams();
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<CampaignBreakdownItem[]>>(
@@ -201,10 +239,12 @@ export function useCampaignBreakdown(source: string, dateFrom: string, dateTo: s
 // ── Revenue Teams (with member breakdown) ─────────────────────────────────────
 
 export function useRevenueTeams(dateFrom: string, dateTo: string) {
+  const program = useReportProgram();
   return useQuery<RevenueTeamDetail[]>({
-    queryKey: ["reports", "revenue", "teams", dateFrom, dateTo],
+    queryKey: ["reports", "revenue", "teams", dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const params = new URLSearchParams();
+      if (program) params.set("program", program);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<RevenueTeamDetail[]>>(
@@ -265,10 +305,12 @@ export function useResponseTimeReport(params: {
   slaMinutes?: number;
 }) {
   const { teamId, dateFrom, dateTo, slaMinutes } = params;
+  const program = useReportProgram();
   return useQuery<ResponseTimeReport>({
-    queryKey: ["reports", "response-time", teamId, dateFrom, dateTo, slaMinutes],
+    queryKey: ["reports", "response-time", teamId, dateFrom, dateTo, slaMinutes, program ?? "all"],
     queryFn: async () => {
       const p = new URLSearchParams();
+      if (program) p.set("program", program);
       if (teamId)     p.set("teamId", teamId);
       if (dateFrom)   p.set("dateFrom", dateFrom);
       if (dateTo)     p.set("dateTo", dateTo);
@@ -314,10 +356,12 @@ export function useLeadTimingReport(params: {
   limit?: number;
 }) {
   const { teamId, dateFrom, dateTo, page = 1, limit = 25 } = params;
+  const program = useReportProgram();
   return useQuery<LeadTimingReport>({
-    queryKey: ["reports", "lead-timing", teamId, dateFrom, dateTo, page, limit],
+    queryKey: ["reports", "lead-timing", teamId, dateFrom, dateTo, page, limit, program ?? "all"],
     queryFn: async () => {
       const p = new URLSearchParams();
+      if (program) p.set("program", program);
       if (teamId)   p.set("teamId", teamId);
       if (dateFrom) p.set("dateFrom", dateFrom);
       if (dateTo)   p.set("dateTo", dateTo);
@@ -386,10 +430,12 @@ export function useFollowUpReport(params: {
   dateTo?: string;
 }) {
   const { teamId, dateFrom, dateTo } = params;
+  const program = useReportProgram();
   return useQuery<FollowUpReport>({
-    queryKey: ["reports", "followups", teamId, dateFrom, dateTo],
+    queryKey: ["reports", "followups", teamId, dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const p = new URLSearchParams();
+      if (program) p.set("program", program);
       if (teamId)   p.set("teamId",   teamId);
       if (dateFrom) p.set("dateFrom", dateFrom);
       if (dateTo)   p.set("dateTo",   dateTo);
@@ -433,10 +479,12 @@ export function usePipelineBreakdown(params: {
   dateTo?: string;
 }) {
   const { teamId, dateFrom, dateTo } = params;
+  const program = useReportProgram();
   return useQuery<PipelineBreakdown>({
-    queryKey: ["reports", "pipeline", teamId, dateFrom, dateTo],
+    queryKey: ["reports", "pipeline", teamId, dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const p = new URLSearchParams();
+      if (program) p.set("program", program);
       if (teamId)   p.set("teamId",   teamId);
       if (dateFrom) p.set("dateFrom", dateFrom);
       if (dateTo)   p.set("dateTo",   dateTo);
@@ -496,10 +544,12 @@ export function useLeadQualityReport(params: {
   dateTo?:  string;
 }) {
   const { teamId, dateFrom, dateTo } = params;
+  const program = useReportProgram();
   return useQuery<LeadQualityReport>({
-    queryKey: ["reports", "lead-quality", teamId, dateFrom, dateTo],
+    queryKey: ["reports", "lead-quality", teamId, dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const p = new URLSearchParams();
+      if (program) p.set("program", program);
       if (teamId)   p.set("teamId",   teamId);
       if (dateFrom) p.set("dateFrom", dateFrom);
       if (dateTo)   p.set("dateTo",   dateTo);
@@ -557,10 +607,12 @@ export interface SalesFunnelReport {
 
 export function useSalesFunnel(params: { teamId?: string; dateFrom?: string; dateTo?: string }) {
   const { teamId, dateFrom, dateTo } = params;
+  const program = useReportProgram();
   return useQuery<SalesFunnelReport>({
-    queryKey: ["reports", "funnel", teamId, dateFrom, dateTo],
+    queryKey: ["reports", "funnel", teamId, dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const p = new URLSearchParams();
+      if (program) p.set("program", program);
       if (teamId)   p.set("teamId",   teamId);
       if (dateFrom) p.set("dateFrom", dateFrom);
       if (dateTo)   p.set("dateTo",   dateTo);
@@ -602,10 +654,12 @@ export interface ManagementAlertsReport {
 
 export function useManagementAlerts(params: { teamId?: string; uncontactedHours?: number }) {
   const { teamId, uncontactedHours } = params;
+  const program = useReportProgram();
   return useQuery<ManagementAlertsReport>({
-    queryKey: ["reports", "alerts", teamId, uncontactedHours],
+    queryKey: ["reports", "alerts", teamId, uncontactedHours, program ?? "all"],
     queryFn: async () => {
       const p = new URLSearchParams();
+      if (program) p.set("program", program);
       if (teamId)            p.set("teamId",           teamId);
       if (uncontactedHours)  p.set("uncontactedHours", String(uncontactedHours));
       const { data } = await api.get<ApiResponse<ManagementAlertsReport>>(`/reports/alerts?${p}`);
@@ -638,10 +692,12 @@ export interface AuditReport {
 
 export function useAuditReport(params: { teamId?: string; dateFrom?: string; dateTo?: string; action?: string }) {
   const { teamId, dateFrom, dateTo, action } = params;
+  const program = useReportProgram();
   return useQuery<AuditReport>({
-    queryKey: ["reports", "audit", teamId, dateFrom, dateTo, action],
+    queryKey: ["reports", "audit", teamId, dateFrom, dateTo, action, program ?? "all"],
     queryFn: async () => {
       const p = new URLSearchParams();
+      if (program) p.set("program", program);
       if (teamId)   p.set("teamId",   teamId);
       if (dateFrom) p.set("dateFrom", dateFrom);
       if (dateTo)   p.set("dateTo",   dateTo);
@@ -688,10 +744,12 @@ export interface MemberSplitReport {
 
 export function useMemberSplitReport(params: { teamId?: string; dateFrom?: string; dateTo?: string }) {
   const { teamId, dateFrom, dateTo } = params;
+  const program = useReportProgram();
   return useQuery<MemberSplitReport>({
-    queryKey: ["reports", "member-split", teamId, dateFrom, dateTo],
+    queryKey: ["reports", "member-split", teamId, dateFrom, dateTo, program ?? "all"],
     queryFn: async () => {
       const p = new URLSearchParams();
+      if (program) p.set("program", program);
       if (teamId)   p.set("teamId",   teamId);
       if (dateFrom) p.set("dateFrom", dateFrom);
       if (dateTo)   p.set("dateTo",   dateTo);
@@ -699,5 +757,90 @@ export function useMemberSplitReport(params: { teamId?: string; dateFrom?: strin
       return data.data as MemberSplitReport;
     },
     staleTime: 60_000,
+  });
+}
+
+// ── Programmes: which lead sources and courses count under each (2026-10-15) ──
+
+export interface ReportProgramSummary {
+  key: ReportProgram;
+  label: string;
+  /** Lead sources tagged with it. */
+  sources: number;
+  /** Courses tagged with it. */
+  courses: number;
+}
+
+/** Each programme with what is tagged with it, and whether this user may change the tags (Super Admin). */
+export function useReportPrograms() {
+  return useQuery<{ programs: ReportProgramSummary[]; canEdit: boolean }>({
+    queryKey: ["reports", "programs"],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<{ programs: ReportProgramSummary[]; canEdit: boolean }>>("/reports/programs");
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+export interface ProgramSourceRow {
+  source: string;
+  leads: number;
+  program: ReportProgram | null;
+  /** Guessed from the name — counts for nothing until saved. */
+  suggested: ReportProgram | null;
+}
+
+export interface ProgramCourseRow {
+  id: string;
+  name: string;
+  status: string;
+  leads: number;
+  program: ReportProgram | null;
+  /** From the programme of the LMS courses it opens — counts for nothing until saved. */
+  suggested: ReportProgram | null;
+  lmsPrograms: string[];
+}
+
+export interface ProgramTags {
+  sources: ProgramSourceRow[];
+  courses: ProgramCourseRow[];
+  lmsError: string | null;
+  updatedAt: string | null;
+}
+
+/** Super Admin: every lead source and course with its programme and a suggestion. */
+export function useProgramTags(enabled: boolean) {
+  return useQuery<ProgramTags>({
+    queryKey: ["reports", "programs", "tags"],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<ProgramTags>>("/reports/programs/tags");
+      return data.data;
+    },
+    enabled,
+    staleTime: 0,
+  });
+}
+
+export interface ProgramTagChanges {
+  sources?: { source: string; program: ReportProgram | null }[];
+  courses?: { id: string; program: ReportProgram | null }[];
+}
+
+/** Super Admin: save the tags — every report is fetched again, the programme tabs now counting by them. */
+export function useSaveProgramTags() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (changes: ProgramTagChanges) => {
+      const { data } = await api.put<ApiResponse<{ changed: { sources: number; courses: number } }>>("/reports/programs/tags", changes);
+      return data.data;
+    },
+    onSuccess: ({ changed }) => {
+      qc.invalidateQueries({ queryKey: ["reports"] });
+      toast.success(changed.sources + changed.courses ? `Programmes saved — ${changed.sources} sources, ${changed.courses} courses changed` : "Programmes saved — nothing changed");
+    },
+    onError: (err: unknown) => {
+      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Could not save the programmes");
+    },
   });
 }

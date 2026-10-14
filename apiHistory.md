@@ -1491,3 +1491,12 @@ lead page; the QC pages still use `useCalls.ts`.
 ### GET /leaderboard?month&rankBy
 - **Hook**: `useLeaderboard(month?, rankBy = "revenue")` — rows now carry `connected` and `talkSeconds`; `rankBy`
   revenue / calls / talk.
+
+### Reports by programme (2026-10-15)
+- **Context**: `ReportProgramContext` / `useReportProgram()` in `hooks/useReports.ts` — every report hook adds
+  `program` to its request and its query key (`program ?? "all"`); outside the Reports page it is null and nothing
+  changes (the dashboard, /reports/followups, /reports/response-time).
+- `useReportPrograms()` — `GET /reports/programs` → `{ programs: [{ key, label, sources, courses }], canEdit }`.
+- `useProgramTags(enabled)` — `GET /reports/programs/tags` (Super Admin).
+- `useSaveProgramTags()` — `PUT /reports/programs/tags`; invalidates `["reports"]`.
+- `REPORT_PROGRAMS`, types `ReportProgram`, `ReportProgramSummary`, `ProgramSourceRow`, `ProgramCourseRow`, `ProgramTags`.

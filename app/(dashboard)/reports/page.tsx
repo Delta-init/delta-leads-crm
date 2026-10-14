@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
+import { ProgramTagsDialog } from "@/components/reports/ProgramTagsDialog";
 import { ViewAsButton } from "@/components/shared/ViewAsButton";
 import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import {
@@ -49,6 +50,9 @@ import {
   useManagementAlerts,
   useAuditReport,
   useMemberSplitReport,
+  useReportPrograms,
+  ReportProgramContext,
+  REPORT_PROGRAMS,
 } from "@/hooks/useReports";
 import type {
   PipelineStage, PipelineTrendPoint, LeadQualityCampaign, LeadQualitySourceSummary,
@@ -56,6 +60,7 @@ import type {
   AlertLead, ManagementAlertsReport,
   AuditEvent,
   MemberSplitRow, DailyAssignmentPoint, SourceTableRow,
+  ReportProgram,
 } from "@/hooks/useReports";
 import { useTeams } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -3733,11 +3738,25 @@ const TABS: { id: Tab; label: string; shortLabel: string; icon: React.ElementTyp
   { id: "audit",          label: "Audit Trail",         shortLabel: "Audit",     icon: Shield       },
 ];
 
+/** "All" (every lead, as before) and the programmes — Forex, Digital Academy, JURA (2026-10-15). */
+const PROGRAM_TABS: { key: ReportProgram | null; label: string }[] = [{ key: null, label: "All" }, ...REPORT_PROGRAMS];
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
 function ReportsPageContent() {
   const sp     = useSearchParams();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<Tab>(() => (sp.get("tab") as Tab) ?? "overview");
+
+  // The programme every tab below shows: one of them, or all leads
+  const [program, setProgram] = useState<ReportProgram | null>(() => {
+    const p = sp.get("program");
+    return REPORT_PROGRAMS.some((x) => x.key === p) ? (p as ReportProgram) : null;
+  });
+  const { data: programInfo } = useReportPrograms();
+  const programLabel = program ? REPORT_PROGRAMS.find((p) => p.key === program)?.label : undefined;
+  const programMeta  = program ? programInfo?.programs.find((p) => p.key === program) : undefined;
 
   // Shared period state — each tab inherits the same date range
   const [quickPeriod, setQuickPeriod] = useState<QuickPeriod>(() => (sp.get("period") as QuickPeriod) ?? "month");
@@ -3753,11 +3772,12 @@ function ReportsPageContent() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (activeTab !== "overview") params.set("tab", activeTab);
+    if (program) params.set("program", program);
     if (quickPeriod !== "month") params.set("period", quickPeriod);
     if (customFrom) params.set("from", customFrom);
     if (customTo) params.set("to", customTo);
     router.replace(`?${params.toString()}`, { scroll: false });
-  }, [activeTab, quickPeriod, customFrom, customTo]);
+  }, [activeTab, program, quickPeriod, customFrom, customTo]);
 
   // ── Smart-hide header on mobile scroll ─────────────────────────────────────
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -3828,8 +3848,35 @@ function ReportsPageContent() {
               </div>
             </div>
 
-            {/* Export PDF */}
-            <ExportPdfDialog type="overall" entityName="CRM Overall" />
+            <div className="flex shrink-0 items-center gap-2">
+              {/* Which lead sources and courses count under each programme — Super Admin */}
+              {programInfo?.canEdit && <ProgramTagsDialog />}
+              {/* Export PDF — the programme's, when one is picked */}
+              <ExportPdfDialog
+                type="overall"
+                entityName={programLabel ? `CRM ${programLabel}` : "CRM Overall"}
+                program={program ?? undefined}
+              />
+            </div>
+          </div>
+
+          {/* Programme — every lead, or Forex / Digital Academy / JURA only */}
+          <div className="flex flex-wrap items-center gap-2">
+            {PROGRAM_TABS.map(({ key, label }) => (
+              <motion.button
+                key={label}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setProgram(key)}
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition-colors",
+                  program === key
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+                )}
+              >
+                {label}
+              </motion.button>
+            ))}
           </div>
 
           {/* Tabs — scrollable on mobile */}
@@ -3877,6 +3924,21 @@ function ReportsPageContent() {
 
       {/* ── Tab content ───────────────────────────────────────────────────── */}
       <div className="py-6 max-w-[1600px] mx-auto space-y-6">
+        {program && programMeta && (programMeta.sources + programMeta.courses === 0 ? (
+          <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Nothing counts as {programLabel} yet — no lead source or course is tagged {programLabel}.{" "}
+              {programInfo?.canEdit ? "Tag them under Programmes, top right." : "A Super Admin tags them under Programmes."}
+            </span>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {programLabel}: leads from the {plural(programMeta.sources, "lead source")} tagged {programLabel}, and leads
+            from untagged sources on its {plural(programMeta.courses, "course")}.
+          </p>
+        ))}
+        <ReportProgramContext.Provider value={program}>
         <AnimatePresence mode="wait">
           {activeTab === "overview" ? (
             <motion.div key="overview" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>
@@ -3928,6 +3990,7 @@ function ReportsPageContent() {
             </motion.div>
           )}
         </AnimatePresence>
+        </ReportProgramContext.Provider>
 
         {/* AI Analytics Assistant */}
         {/* <div className="max-w-2xl">
