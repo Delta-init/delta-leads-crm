@@ -17,6 +17,7 @@ import {
   X,
   RefreshCw,
   ArrowUpDown,
+  Phone,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -186,6 +187,7 @@ export default function InactiveLeadsPage() {
   const [owner, setOwner] = useState<{ id: string; name: string } | null>(null);
   const [kind, setKind] = useState<string>(ALL);
   const [sort, setSort] = useState<InactiveSort>("waiting_desc");
+  const [called, setCalled] = useState<string>(ALL);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [movesSearch, setMovesSearch] = useState("");
@@ -203,6 +205,7 @@ export default function InactiveLeadsPage() {
     if (g("q")) { setSearch(g("q")); setQuery(g("q")); }
     if (g("team")) setTeamId(g("team"));
     if (SORTS.some((o) => o.value === g("sort"))) setSort(g("sort") as InactiveSort);
+    if (g("called") === "yes" || g("called") === "no") setCalled(g("called"));
     setDateFrom(g("from")); setDateTo(g("to"));
     if (g("kind")) setKind(g("kind"));
     if (g("mq")) { setMovesSearch(g("mq")); setMovesQuery(g("mq")); }
@@ -214,12 +217,12 @@ export default function InactiveLeadsPage() {
     if (!urlRead) return;
     const p = new URLSearchParams();
     const put = (k: string, v: string, skip = "") => { if (v && v !== skip) p.set(k, v); };
-    put("tab", tab, "inactive"); put("q", query); put("team", teamId, ALL); put("sort", sort, "waiting_desc");
+    put("tab", tab, "inactive"); put("q", query); put("team", teamId, ALL); put("sort", sort, "waiting_desc"); put("called", called, ALL);
     put("from", dateFrom); put("to", dateTo); put("kind", kind, ALL); put("mq", movesQuery);
     put("msort", movesSort, "newest"); put("mfrom", movedFrom); put("mto", movedTo);
     const qs = p.toString();
     window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-  }, [urlRead, tab, query, teamId, sort, dateFrom, dateTo, kind, movesQuery, movesSort, movedFrom, movedTo]);
+  }, [urlRead, tab, query, teamId, sort, called, dateFrom, dateTo, kind, movesQuery, movesSort, movedFrom, movedTo]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialogLeads, setDialogLeads] = useState<InactiveLead[] | null>(null);
   const [callsLead, setCallsLead] = useState<InactiveLead | null>(null);
@@ -234,17 +237,17 @@ export default function InactiveLeadsPage() {
   }, [movesSearch]);
 
   // A new filter or page starts from page 1 with nothing ticked.
-  useEffect(() => setPage(1), [query, teamId, owner, sort, dateFrom, dateTo]);
-  useEffect(() => setSelected(new Set()), [query, teamId, owner, page, sort, dateFrom, dateTo]);
+  useEffect(() => setPage(1), [query, teamId, owner, sort, called, dateFrom, dateTo]);
+  useEffect(() => setSelected(new Set()), [query, teamId, owner, page, sort, called, dateFrom, dateTo]);
   useEffect(() => setMovesPage(1), [kind, teamId, movesQuery, movesSort, movedFrom, movedTo]);
 
   const filtersOn = tab === "inactive"
-    ? Boolean(query || owner || teamId !== ALL || sort !== "waiting_desc" || dateFrom || dateTo)
+    ? Boolean(query || owner || teamId !== ALL || sort !== "waiting_desc" || called !== ALL || dateFrom || dateTo)
     : Boolean(movesQuery || kind !== ALL || teamId !== ALL || movesSort !== "newest" || movedFrom || movedTo);
   const clearFilters = () => {
     setTeamId(ALL);
     if (tab === "inactive") {
-      setSearch(""); setQuery(""); setOwner(null); setSort("waiting_desc"); setDateFrom(""); setDateTo("");
+      setSearch(""); setQuery(""); setOwner(null); setSort("waiting_desc"); setCalled(ALL); setDateFrom(""); setDateTo("");
     } else {
       setMovesSearch(""); setMovesQuery(""); setKind(ALL); setMovesSort("newest"); setMovedFrom(""); setMovedTo("");
     }
@@ -257,6 +260,7 @@ export default function InactiveLeadsPage() {
     teamId: teamId === ALL ? undefined : teamId,
     ownerId: owner?.id,
     sort: sort === "waiting_desc" ? undefined : sort,
+    called: called === ALL ? undefined : (called as "yes" | "no"),
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
   };
@@ -482,6 +486,17 @@ export default function InactiveLeadsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {SORTS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={called} onValueChange={setCalled}>
+                  <SelectTrigger className="h-9 min-w-0 grow basis-[calc(50%-0.25rem)] sm:grow-0 sm:basis-auto sm:w-44" aria-label="Called or not">
+                    <Phone className="mr-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>Called or not</SelectItem>
+                    <SelectItem value="yes">Called</SelectItem>
+                    <SelectItem value="no">Not called yet</SelectItem>
                   </SelectContent>
                 </Select>
                 <DayRangeFilter className="w-full sm:w-auto" label="Assigned" from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />

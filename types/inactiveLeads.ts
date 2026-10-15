@@ -63,6 +63,8 @@ export interface InactiveLeadFilters {
   ownerId?: string;
   search?: string;
   sort?: InactiveSort;
+  /** yes: has at least one 3CX call on record · no: never called. */
+  called?: "yes" | "no";
   /** Assigned between these Dubai days (YYYY-MM-DD). */
   dateFrom?: string;
   dateTo?: string;
