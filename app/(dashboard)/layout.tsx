@@ -6,6 +6,8 @@ import { Header } from "@/components/layout/Header";
 import { useAuthStore } from "@/lib/store/authStore";
 import { navItems } from "@/components/layout/Sidebar";
 import { useReminderNotifications } from "@/hooks/useReminderNotifications";
+import { useSyncedCurrency } from "@/hooks/useSyncedCurrency";
+import { CurrencyRedraw } from "@/components/shared/CurrencyRedraw";
 import { RecentPageTracker } from "@/components/shared/CommandPalette";
 import { RootPortalHistoryBridge } from "@/components/shared/RootPortalHistoryBridge";
 import { CallFlowProvider } from "@/components/calls/CallFlow";
@@ -29,6 +31,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { isAuthenticated, hasPermission, updateUser } = useAuthStore();
   const router = useRouter();
   useReminderNotifications();
+  // The currency they see amounts in, from their account — the same on every device (2026-10-15).
+  useSyncedCurrency();
   // Every minute the app is open: whether anyone used it — the Activity page and idle alerts.
   useActivityHeartbeat();
 
@@ -84,7 +88,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6"><CurrencyRedraw>{children}</CurrencyRedraw></main>
       </div>
     </div>
     </CallFlowProvider>

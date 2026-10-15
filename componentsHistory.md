@@ -1238,3 +1238,10 @@ stays in the corner. "Don't log" drops it. Only for calls started here, and only
 - Later the same day: the Activity header's badge says "Idle alerts paused · the HRMS isn't answering" (`idleRule.paused`);
   `AttendanceTable` exports `clockAt` and `shiftText`, says "no clock-out" for a past day, and "isn't linked yet" vs
   "didn't answer"; `TeamAttendanceTab` answers a 403 with "Not yours to see".
+
+### Change log — 2026-10-15 (currency on the account)
+- `app/(dashboard)/settings/page.tsx` — the Currency card uses `chooseCurrency`; its text says the choice follows you.
+- `app/(dashboard)/layout.tsx` — `useSyncedCurrency()`; the page sits in `CurrencyRedraw` (new,
+  `components/shared/CurrencyRedraw.tsx`), which draws it again when the account's currency arrives as the app opens —
+  not on a pick in Settings, nor while someone is typing.
+- `app/(dashboard)/settings/page.tsx` — its toasts go through `@/lib/toast` (the app's toaster; `sonner`'s never showed).
