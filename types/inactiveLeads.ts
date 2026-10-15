@@ -30,6 +30,8 @@ export interface InactiveLead {
   /** Everyone who lost it before — automatic moves never send it back to them. */
   lostBy: PersonRef[];
   autoMove: AutoMoveState;
+  /** Every 3CX call on record for the lead, by anyone. */
+  calls: { total: number; answered: number; lastAt: string | null };
 }
 
 export interface InactiveRule {

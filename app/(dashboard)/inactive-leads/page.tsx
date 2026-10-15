@@ -35,6 +35,7 @@ import { getSocket } from "@/lib/socket";
 import { useAuthStore } from "@/lib/store/authStore";
 import { INACTIVE_LEADS_KEY, useInactiveLeadTeams, useInactiveLeads, useLeadMoves } from "@/hooks/useInactiveLeads";
 import { MoveLeadsDialog } from "@/components/inactive-leads/MoveLeadsDialog";
+import { CallCountButton, LeadCallsDialog } from "@/components/inactive-leads/LeadCallsDialog";
 import type { AutoMoveState, InactiveLead, InactiveRule, LeadMoveEntry } from "@/types/inactiveLeads";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -169,6 +170,7 @@ export default function InactiveLeadsPage() {
   const [kind, setKind] = useState<string>(ALL);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialogLeads, setDialogLeads] = useState<InactiveLead[] | null>(null);
+  const [callsLead, setCallsLead] = useState<InactiveLead | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setQuery(search.trim()), 350);
@@ -492,6 +494,7 @@ export default function InactiveLeadsPage() {
                           onTick={() => toggle(lead.id)}
                           onOwner={() => lead.owner && setOwner({ id: lead.owner.id, name: lead.owner.name })}
                           onMove={() => setDialogLeads([lead])}
+                          onCalls={() => setCallsLead(lead)}
                         />
                       ))}
                     </motion.ul>
@@ -512,6 +515,7 @@ export default function InactiveLeadsPage() {
                             </th>
                           )}
                           <th className={cn("py-2.5 font-medium", canMove ? "px-3" : "px-4")}>Lead</th>
+                          <th className="px-3 py-2.5 font-medium">Calls</th>
                           <th className="px-3 py-2.5 font-medium">Owner</th>
                           <th className="px-3 py-2.5 font-medium">Team</th>
                           <th className="px-3 py-2.5 font-medium">Waiting</th>
@@ -536,6 +540,7 @@ export default function InactiveLeadsPage() {
                             onTick={() => toggle(lead.id)}
                             onOwner={() => lead.owner && setOwner({ id: lead.owner.id, name: lead.owner.name })}
                             onMove={() => setDialogLeads([lead])}
+                            onCalls={() => setCallsLead(lead)}
                           />
                         ))}
                       </motion.tbody>
@@ -657,6 +662,7 @@ export default function InactiveLeadsPage() {
           leads={dialogLeads ?? []}
           onMoved={() => setSelected(new Set())}
         />
+        <LeadCallsDialog lead={callsLead} onClose={() => setCallsLead(null)} />
       </motion.div>
     </TooltipProvider>
   );
@@ -672,9 +678,10 @@ interface LeadRowProps {
   onTick: () => void;
   onOwner: () => void;
   onMove: () => void;
+  onCalls: () => void;
 }
 
-function LeadRow({ lead, rule, canMove, ticked, onTick, onOwner, onMove }: LeadRowProps) {
+function LeadRow({ lead, rule, canMove, ticked, onTick, onOwner, onMove, onCalls }: LeadRowProps) {
   const { auto, label, late } = autoMoveOf(lead, rule);
 
   return (
@@ -696,6 +703,9 @@ function LeadRow({ lead, rule, canMove, ticked, onTick, onOwner, onMove }: LeadR
           {lead.name || "Unnamed lead"}
         </Link>
         <div className="font-mono text-xs text-muted-foreground">{lead.phone}</div>
+      </td>
+      <td className="px-3 py-2.5">
+        <CallCountButton lead={lead} onOpen={onCalls} />
       </td>
       <td className="px-3 py-2.5">
         {lead.owner ? (
@@ -756,7 +766,7 @@ function LeadRow({ lead, rule, canMove, ticked, onTick, onOwner, onMove }: LeadR
 }
 
 /** A lead on a phone: the row's facts stacked, with the tooltips' words written out. */
-function LeadCard({ lead, rule, canMove, ticked, onTick, onOwner, onMove }: LeadRowProps) {
+function LeadCard({ lead, rule, canMove, ticked, onTick, onOwner, onMove, onCalls }: LeadRowProps) {
   const { auto, label, late } = autoMoveOf(lead, rule);
   // Why it won't move on its own, written out — a touch screen has no hover for the tooltip.
   const explain = lead.autoMove === "before_switch" || lead.autoMove === "stuck" || lead.autoMove === "no_team";
@@ -773,6 +783,7 @@ function LeadCard({ lead, rule, canMove, ticked, onTick, onOwner, onMove }: Lead
               {lead.name || "Unnamed lead"}
             </Link>
             <div className="font-mono text-xs text-muted-foreground">{lead.phone}</div>
+            <CallCountButton lead={lead} onOpen={onCalls} className="mt-1" />
           </div>
           <div className="shrink-0 text-right">
             <div className={cn("font-mono text-sm font-semibold", late ? "text-red-500" : "text-amber-500")}>
