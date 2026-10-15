@@ -1515,3 +1515,14 @@ lead page; the QC pages still use `useCalls.ts`.
 - Types: `types/inactiveLeads.ts`, `types/settings.ts` (no email), `types/notification.ts`; `CRM_MODULES` gains
   `"inactive-leads"` (+ `MODULE_LABELS`); `ActivityAction` gains `"inactive_reassigned"`; an activity's `performedBy`
   may be null (the CRM did it).
+
+### GET /public/leaderboard?month&rankBy — the open board, live (2026-10-15)
+- **Hook**: `usePublicLeaderboard(month, rankBy, live?)` — a plain `fetch` (no token, no refresh), every 30 s (every
+  minute while live), the previous board kept while the next loads. Rows also carry `callsToday`, `connectedToday`, `talkSecondsToday`, `leadCounts`,
+  `totalLeads` (optional — an older server still shows the rest); the board `currentMonth`, `targets`, `updatedAt`.
+  `DEFAULT_TALK_TARGETS` (100 / 1,000 min) when the server doesn't say.
+- **Live**: `useLeaderboardLive(month, onChange)` — socket.io-client to the API's `/public-leaderboard` namespace (its
+  own connection, `forceNew`, no sign-in); `leaderboard:changed` for the month shown → `onChange` (the page refetches).
+  Returns `LiveState`: "connecting" (not up yet), "live", "reconnecting" (lost after being up). Turned away (too many
+  screens, or one already on the connection) → tries again a minute later; dropped by the server → again in 2 s.
+- `GET /leaderboard` (signed in): the same new row fields.

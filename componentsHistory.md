@@ -1206,3 +1206,19 @@ stays in the corner. "Don't log" drops it. Only for calls started here, and only
 - `components/layout/Sidebar.tsx` — Inactive Leads (`Hourglass`, `permModule: "inactive-leads"`); the new-leads count
   refreshes on a stored notice too (its type at the top) and on a lead moved away.
 - `app/(dashboard)/leads/[leadId]/page.tsx` — `inactive_reassigned` in the activity log; "by System" with no person.
+
+### Change log — 2026-10-15 (the open leaderboard, a TV board)
+- `app/public/leaderboard/page.tsx` (new) — outside the dashboard layout, no sign-in. CSS variables for the two themes
+  (solid colours; dark unless `public-leaderboard-dark` = "0" in this browser) and a boot script, so a light screen
+  never flashes dark. `PersonCard` (a phone layout and a desktop / TV grid with a header row; 1st–3rd in gold / silver
+  / bronze — border, side bar, badge, the ranked figure), `RankMark` (`Trophy3D` for the leader only, turning with CSS;
+  numbered badges below), `Flash` (a changed figure blue for a moment, not on switching month or ranking),
+  `TargetBar` / `TargetFigure`, `LeadsNow` (the leads held now, by status), `Clock` (Dubai, ticks on its own). Controls
+  fade after 4 s idle and the pointer hides (≥ 1024 px); auto-scroll after 20 s idle when taller than the screen
+  (≥ 1024 px); full screen; ▲ / ▼ for 8 s after a live re-order; a month with nothing in it shows "Nothing on the
+  board yet".
+- `app/public/leaderboard/layout.tsx` (new) — title "Leaderboard — Delta Sales", dark status bar.
+- `app/(dashboard)/leaderboard/page.tsx` — Today column (current month only); **Public link** (copies, else opens).
+- `hooks/useLeaderboard.ts` — `usePublicLeaderboard`, `useLeaderboardLive`, the new optional row fields.
+- The open board's statuses are named from `lib/statusConfig.ts` (`STATUS_META`), in pipeline order with closed and lost
+  last; an unknown key in its own words ("unknown" → "Unknown"). Shared links carry og site name and type.

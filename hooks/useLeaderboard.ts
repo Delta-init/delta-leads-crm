@@ -1,5 +1,7 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { io as openSocket } from "socket.io-client";
 import api from "@/lib/axios";
 
 /** How the board is ranked: revenue (then closings, follow-ups, calls — as before), calls, or talk time (2026-10-12). */
@@ -11,7 +13,10 @@ export const RANK_OPTIONS: { value: LeaderboardRank; label: string }[] = [
   { value: "talk", label: "Talk time" },
 ];
 
-/** One salesperson's month, as GET /leaderboard ranks it. Calls, connected and talk time come from 3CX. */
+/**
+ * One salesperson's month, as GET /leaderboard ranks it. Calls, connected and talk time come from 3CX. Today's
+ * calls and the leads by status came in 2026-10-15 — optional, so a server not yet updated still shows the rest.
+ */
 export interface LeaderboardRow {
   rank: number;
   userId: string;
@@ -22,12 +27,23 @@ export interface LeaderboardRow {
   calls: number;
   connected: number;
   talkSeconds: number;
+  callsToday?: number;
+  connectedToday?: number;
+  talkSecondsToday?: number;
+  leadCounts?: Record<string, number>;
+  totalLeads?: number;
 }
+
+/** Talk-time targets (minutes on 3CX), as on the Bangalore CRM's board — the server's, else these. */
+export const DEFAULT_TALK_TARGETS = { dayMinutes: 100, monthMinutes: 1000 };
 
 export interface Leaderboard {
   month: string;
   rankBy: LeaderboardRank;
   rows: LeaderboardRow[];
+  currentMonth?: boolean;
+  targets?: { dayMinutes: number; monthMinutes: number };
+  updatedAt?: string;
 }
 
 /** "1h 05m" / "4m 12s" / "0s" — a month's talk time. */
@@ -48,3 +64,78 @@ export const useLeaderboard = (month?: string, rankBy: LeaderboardRank = "revenu
       return res.data.data;
     },
   });
+
+/**
+ * The open board (GET /public/leaderboard — no sign-in), for the public page: plain fetch, so no token or refresh
+ * gets involved. Refreshed every 30 s, as the Bangalore CRM's — every minute while the live line is up (it says when
+ * to fetch), just in case.
+ */
+export const usePublicLeaderboard = (month: string, rankBy: LeaderboardRank, live = false) =>
+  useQuery({
+    queryKey: ["public-leaderboard", month, rankBy],
+    refetchInterval: live ? 60_000 : 30_000,
+    refetchIntervalInBackground: true,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const params = new URLSearchParams({ month, ...(rankBy !== "revenue" ? { rankBy } : {}) });
+      const res = await fetch(`/api/v1/public/leaderboard?${params}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`The leaderboard answered ${res.status}`);
+      return ((await res.json()) as { data: Leaderboard }).data;
+    },
+  });
+
+// Where the socket lives: the API's address without /api/v1 (as lib/socket.ts works it out).
+const SOCKET_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001/api/v1").replace(/\/api\/v1\/?$/, "");
+
+/** The live line: not up yet, up, or lost after being up (the refresh carries on meanwhile). */
+export type LiveState = "connecting" | "live" | "reconnecting";
+
+/**
+ * The open board's live line (the TV board, 2026-10-15): the API's /public-leaderboard socket says "changed" — the
+ * month and when, nothing more — as a screen joins and whenever the board moves, and the page fetches it at once.
+ * Its own connection, no sign-in, never the signed-in socket. The refresh carries on either way. A screen turned away
+ * (the API caps how many watch) tries again once a minute.
+ */
+export function useLeaderboardLive(month: string, onChange: () => void): LiveState {
+  const [live, setLive] = useState<LiveState>("connecting");
+  const latest = useRef({ month, onChange });
+  latest.current = { month, onChange };
+  useEffect(() => {
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const socket = openSocket(`${SOCKET_ORIGIN}/public-leaderboard`, {
+      forceNew: true,
+      transports: ["websocket", "polling"],
+      reconnectionDelay: 2_000,
+      reconnectionDelayMax: 30_000,
+    });
+    let wasUp = false;
+    socket.on("connect", () => {
+      wasUp = true;
+      setLive("live");
+    });
+    socket.on("disconnect", (reason) => {
+      setLive("reconnecting");
+      // Dropped by the server, the socket won't try again by itself (as lib/socket.ts).
+      if (reason === "io server disconnect") {
+        clearTimeout(retry);
+        retry = setTimeout(() => socket.connect(), 2_000);
+      }
+    });
+    socket.on("connect_error", () => {
+      setLive(wasUp ? "reconnecting" : "connecting");
+      // Turned away by the server: the socket won't try again by itself.
+      if (!socket.active) {
+        clearTimeout(retry);
+        retry = setTimeout(() => socket.connect(), 60_000);
+      }
+    });
+    socket.on("leaderboard:changed", (said?: { month?: string }) => {
+      if (said?.month === latest.current.month) latest.current.onChange();
+    });
+    return () => {
+      clearTimeout(retry);
+      socket.disconnect();
+    };
+  }, []);
+  return live;
+}
