@@ -1526,3 +1526,15 @@ lead page; the QC pages still use `useCalls.ts`.
   Returns `LiveState`: "connecting" (not up yet), "live", "reconnecting" (lost after being up). Turned away (too many
   screens, or one already on the connection) → tries again a minute later; dropped by the server → again in 2 s.
 - `GET /leaderboard` (signed in): the same new row fields.
+
+### Activity (2026-10-15)
+- `useActivityPeople(filters)` — `GET /activity/people`, every 30 s; rows now carry `shift`, `clockedInAt`,
+  `clockedOutAt` (optional for an older server).
+- `useLoginEvents(filters)` — `GET /activity/logins`; `useIdleStretches(filters)` — `GET /activity/idle`.
+- `useAttendance({ day?, teamId?, search? })` — `GET /activity/attendance`; every minute for today.
+- `useTeamAttendance(teamId, day?)` — `GET /teams/:id/attendance`; no retry on 403.
+- `useActivityHeartbeat()` — `POST /activity/heartbeat` every minute the app is open (not while viewing as someone);
+  mounted in the dashboard layout.
+- `useLogout()` now sends `POST /auth/logout` with the token before dropping it (not while viewing as someone).
+- Types: `types/activity.ts` (`PersonActivity`, `AttendanceDay`, `AttendancePerson`, `AttendanceShift`, …);
+  `CRM_MODULES` gains `"activity"` (+ `MODULE_LABELS`).

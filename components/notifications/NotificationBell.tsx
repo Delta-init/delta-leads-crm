@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, BellOff, X, CheckCircle2, UserCheck,
   MessageCircle, StickyNote, ExternalLink, Loader2,
-  ArrowRightLeft, AlertTriangle,
+  ArrowRightLeft, AlertTriangle, Coffee,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,8 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: 
   inactive_lead_moved:  { icon: ArrowRightLeft, color: "text-amber-400", bg: "bg-amber-500/15" },
   inactive_leads_moved: { icon: ArrowRightLeft, color: "text-amber-400", bg: "bg-amber-500/15" },
   inactive_leads_stuck: { icon: AlertTriangle,  color: "text-red-400",   bg: "bg-red-500/15"   },
+  idle_self:            { icon: Coffee,         color: "text-amber-400", bg: "bg-amber-500/15" },
+  idle_alert:           { icon: Coffee,         color: "text-amber-400", bg: "bg-amber-500/15" },
 };
 const DEFAULT_TYPE = { icon: Bell, color: "text-primary", bg: "bg-primary/15" };
 

@@ -158,6 +158,7 @@ import { fmtCompact, fmtFull } from "@/lib/currency";
 import { toGstDateISO, gstPeriodStartISO } from "@/lib/utils";
 import { usePushStatus } from "@/hooks/usePushStatus";
 import { ViewAsButton } from "@/components/shared/ViewAsButton";
+import { TeamAttendanceTab } from "@/components/activity/TeamAttendanceTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -209,11 +210,12 @@ interface TeamLog {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type TabId = "dashboard" | "members" | "leads" | "kanban" | "batch" | "dailysplit" | "logs" | "updates" | "revenue" | "reminders" | "report" | "settings";
+type TabId = "dashboard" | "members" | "attendance" | "leads" | "kanban" | "batch" | "dailysplit" | "logs" | "updates" | "revenue" | "reminders" | "report" | "settings";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "dashboard",  label: "Dashboard"   },
   { id: "members",    label: "Members"     },
+  { id: "attendance", label: "Attendance"  },
   { id: "leads",      label: "Leads"       },
   { id: "kanban",     label: "Kanban"      },
   { id: "batch",      label: "Batch"       },
@@ -3597,7 +3599,7 @@ function TeamDetailPageContent() {
   const { user, hasPermission } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const t = searchParams.get("tab") as TabId | null;
-    const valid: TabId[] = ["dashboard", "members", "leads", "kanban", "batch", "dailysplit", "logs", "updates", "revenue", "reminders", "report", "settings"];
+    const valid: TabId[] = ["dashboard", "members", "attendance", "leads", "kanban", "batch", "dailysplit", "logs", "updates", "revenue", "reminders", "report", "settings"];
     return t && valid.includes(t) ? t : "dashboard";
   });
 
@@ -3647,6 +3649,11 @@ function TeamDetailPageContent() {
     user?.role?.roleName === "Reporter" ||
     user?.role?.roleName === "reporter";
   const canSeeSensitiveTabs = isSuperAdmin || !!isLeader || isReporter;
+  // Shift and clock-ins (the HRMS): this team's leaders, or a role with the Activity box — as the server allows.
+  const canSeeAttendance = !!isLeader || hasPermission("activity", "view");
+  useEffect(() => {
+    if (team && !canSeeAttendance && activeTab === "attendance") setActiveTab("dashboard");
+  }, [team, canSeeAttendance, activeTab]);
 
   // If a regular member somehow lands on a restricted tab, bounce them to dashboard
   useEffect(() => {
@@ -3660,6 +3667,7 @@ function TeamDetailPageContent() {
   const visibleTabs = TABS.filter((tab) => {
     if (tab.id === "leads" || tab.id === "logs" || tab.id === "revenue" || tab.id === "reminders" || tab.id === "kanban" || tab.id === "batch" || tab.id === "dailysplit" || tab.id === "report") return canSeeSensitiveTabs;
     if (tab.id === "settings") return !!isLeaderOrAdmin;
+    if (tab.id === "attendance") return canSeeAttendance;
     return true;
   });
 
@@ -3943,6 +3951,18 @@ function TeamDetailPageContent() {
                 onRedistributeToday={redistributeToday}
                 redistributing={redistributing}
               />
+            </motion.div>
+          )}
+
+          {activeTab === "attendance" && canSeeAttendance && (
+            <motion.div
+              key="attendance"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <TeamAttendanceTab teamId={teamId} />
             </motion.div>
           )}
 

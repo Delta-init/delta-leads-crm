@@ -1222,3 +1222,19 @@ stays in the corner. "Don't log" drops it. Only for calls started here, and only
 - `hooks/useLeaderboard.ts` — `usePublicLeaderboard`, `useLeaderboardLive`, the new optional row fields.
 - The open board's statuses are named from `lib/statusConfig.ts` (`STATUS_META`), in pipeline order with closed and lost
   last; an unknown key in its own words ("unknown" → "Unknown"). Shared links carry og site name and type.
+
+### Change log — 2026-10-15 (Activity, with the HRMS)
+- `app/(dashboard)/activity/page.tsx` (new, as in the Remote CRM) — stats, People / Attendance / Sign-ins / Idle
+  alerts; cards below `lg`, tables from it; `ShiftLine` ("Shift 10:00–19:00 · in 09:57") under each person's status;
+  the Attendance tab's day picker ("Today" back), search and team filter.
+- `components/activity/AttendanceTable.tsx` (new) — the day's counts, then a card per person (phones, tablets) or a
+  table (shift, in, out, sessions, worked, day, now); `dayBadge`, `nowBadge`; the HRMS not answering → a warning.
+- `components/activity/TeamAttendanceTab.tsx` (new) — a team's page → Attendance: a day picker and the table.
+- `app/(dashboard)/teams/[teamId]/page.tsx` — the Attendance tab, for its leaders or the Activity box.
+- `components/settings/AutomationSettingsCard.tsx` — the Idle alerts section; working hours say both clocks.
+- `components/layout/Sidebar.tsx` — Activity (`permModule: "activity"`).
+- `components/notifications/NotificationBell.tsx` — `idle_self`, `idle_alert`.
+- `app/(dashboard)/layout.tsx` — `useActivityHeartbeat()`.
+- Later the same day: the Activity header's badge says "Idle alerts paused · the HRMS isn't answering" (`idleRule.paused`);
+  `AttendanceTable` exports `clockAt` and `shiftText`, says "no clock-out" for a past day, and "isn't linked yet" vs
+  "didn't answer"; `TeamAttendanceTab` answers a 403 with "Not yours to see".

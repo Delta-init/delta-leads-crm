@@ -898,3 +898,20 @@ Leaderboard counts 3CX calls, connected calls and talk time, and can be ranked b
   and come back with the mouse; untouched for 20 s, a board taller than the screen glides down, rests and goes back up
   (big screens only). The Dubai clock ticks in the corner.
 - **Signed-in Leaderboard page**: a Today column (calls · call time today) for the current month.
+
+## Activity — who is here, and the HRMS's shift and clock-ins (2026-10-15)
+
+- **Where**: sidebar → Activity (the "Activity" box in Roles — the Super Admin only until a role is given it); a
+  team's page → Attendance (its leaders, or the Activity box); Settings → Automation & alerts → Idle alerts.
+- **People**: everyone's status now (active, no activity for…, app closed, signed out, not seen today), active time
+  today, last seen, last sign-in (device, IP), "Alerted" when an idle alert is out, where the HRMS has them (clocked
+  in / on a break / clocked out / on leave), and "Shift 10:00–19:00 · in 09:57 · out 18:02".
+- **Attendance**: a day (today by default, or any day picked): each person's HRMS shift, first clock-in, last
+  clock-out ("still in"), every session, worked time, the day (present, late · 25m, half day, left early, on leave,
+  WFH, day off, not in yet), and now (clocked in, on a break since…, clocked out, on leave). The day's counts on top.
+  Search and team filter. The HRMS not answering → said so.
+- **Sign-ins** and **Idle alerts**: as in the Remote CRM.
+- **Idle alerts (Settings)**: switch, the limit, and "also alert the person's team leaders"; only for someone clocked
+  in on the HRMS and not on a break; never on leave; in the bell and by push — no email. While the HRMS isn't
+  answering they wait — the Activity page's badge says "paused".
+- **Sign-out**: recorded when someone presses Logout.

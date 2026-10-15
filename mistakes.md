@@ -465,7 +465,7 @@ No `min` attribute on `datetime-local` input, and no frontend validation.
 
 Copy the template at the top and place it at the **top** of the correct category section.
 
-**Entry count**: 16
+**Entry count**: 18
 *(Increment every time you add a mistake)*
 
 ## [2026-10-15] The open leaderboard page — what the test round found (fixed before shipping)
@@ -479,3 +479,18 @@ Copy the template at the top and place it at the **top** of the correct category
 - **"Reconnecting" before the live line had ever connected.** **Fix**: Connecting / Live / Reconnecting.
 - **The live line stayed down after the server dropped it** ("io server disconnect" isn't retried by socket.io).
   **Fix**: try again in 2 s, as `lib/socket.ts` does.
+
+## [2026-10-15] The Activity page's Attendance — what the test round found (fixed before shipping)
+
+- **A past day with no clock-out said "still in" and "09:58–now".** **Fix**: today "still in" / "now"; another day
+  "no clock-out" / "no out".
+- **The HRMS not linked read as "didn't answer", every row "Not in the HRMS", with server variable names.** **Fix**:
+  "isn't linked yet" vs "didn't answer — why"; rows say "—" while the HRMS can't say.
+- **People said "Clocked out" for someone who never clocked in, or on a day off.** **Fix**: "Not clocked in" / "Day off".
+- **Small ones**: the person chip showed on the Attendance tab (which ignores it); an hours-a-day shift read
+  "00:00–08:00"; times not in the shift's zone; a 403 on a team's tab offered "Try again"; a zone the browser doesn't
+  know would have broken the table; the team tab's empty text spoke of a search it hasn't. All fixed.
+- **Found by the Draw CRM's test round, the same code here**: the Activity tabs pushed a phone's page wider (they
+  scroll now); a sign-out while viewing as someone recorded nothing for the admin (now the admin's token, by fetch
+  with keepalive); an emptied time field and an idle limit longer than the working day reached the server; Settings
+  offered to people who can't open it; a blank Attendance tab for members; the server's reason hidden. All fixed.

@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { Zap, Timer, Clock, Loader2, Save, Info, ArrowRight } from "lucide-react";
+import { Zap, Timer, Clock, Loader2, Save, Info, ArrowRight, Coffee } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,7 @@ const sectionVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
 };
 
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const minutesOf = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
   return h * 60 + m;
@@ -101,7 +103,13 @@ export function AutomationSettingsCard() {
     if (draft.idleAlerts.limitMinutes < 5) p.push("The idle limit must be at least 5 minutes.");
     if (draft.idleAlerts.limitMinutes > 24 * 60) p.push("The idle limit can be at most 24 hours.");
     if (!draft.workingHours.days.length) p.push("Pick at least one working day.");
-    if (minutesOf(draft.workingHours.end) <= minutesOf(draft.workingHours.start)) p.push("Working hours must end after they start.");
+    const { start, end } = draft.workingHours;
+    if (!HHMM.test(start) || !HHMM.test(end)) p.push("Set both working-hour times.");
+    else if (minutesOf(end) <= minutesOf(start)) p.push("Working hours must end after they start.");
+    // Quiet time counts within one working day, so a longer limit could never be reached.
+    else if (draft.idleAlerts.enabled && draft.idleAlerts.limitMinutes >= minutesOf(end) - minutesOf(start)) {
+      p.push("The idle limit must be shorter than the working day, or it could never fire.");
+    }
     return p;
   }, [draft]);
 
@@ -199,8 +207,50 @@ export function AutomationSettingsCard() {
           </div>
         </Section>
 
+        {/* ── Idle alerts ── */}
+        <Section
+          icon={Coffee}
+          title="Idle alerts"
+          description="Alert the employee and the super admins when someone who used the app today, and hasn't signed out, has done nothing in it for a while during working hours — only while they are clocked in on the HRMS and not on a break; never on leave. One alert per quiet stretch; super admins aren't tracked. In the app and by push — no email."
+        >
+          <div className="flex items-center justify-between gap-4">
+            <Label htmlFor="idle-enabled" className="text-sm">Send idle alerts</Label>
+            <Switch
+              id="idle-enabled"
+              checked={draft.idleAlerts.enabled}
+              onCheckedChange={(v) => set("idleAlerts", { enabled: v })}
+              disabled={!canEdit}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-muted-foreground">After no activity for</span>
+            <DurationInput
+              id="idle-limit"
+              minutes={draft.idleAlerts.limitMinutes}
+              onChange={(m) => set("idleAlerts", { limitMinutes: m })}
+              disabled={!canEdit}
+              maxHours={24}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={draft.idleAlerts.notifyTeamLeaders}
+              onCheckedChange={(v) => set("idleAlerts", { notifyTeamLeaders: v === true })}
+              disabled={!canEdit}
+            />
+            Also alert the person&apos;s team leaders
+          </label>
+          {hasPermission("activity", "view") && (
+            <div className="flex justify-end text-xs">
+              <Link href="/activity" className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+                See who&apos;s active <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          )}
+        </Section>
+
         {/* ── Working hours ── */}
-        <Section icon={Clock} title="Working hours" description="The inactive-lead clock only runs inside these hours, in this time zone — by default the main shift, 10:00–19:00 GST, Monday to Saturday.">
+        <Section icon={Clock} title="Working hours" description="Both clocks above only run inside these hours, in this time zone — by default the main shift, 10:00–19:00 GST, Monday to Saturday.">
           <div className="flex flex-wrap gap-1.5">
             {DAYS.map((label, day) => {
               const on = draft.workingHours.days.includes(day);

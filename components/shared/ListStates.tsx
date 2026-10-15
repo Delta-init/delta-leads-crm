@@ -30,11 +30,12 @@ export function EmptyState({ icon: Icon, title, text, action }: EmptyStateProps)
 }
 
 /** A list that failed to load, with a retry. */
-export function ErrorState({ onRetry }: { onRetry: () => void }) {
+export function ErrorState({ onRetry, text }: { onRetry: () => void; text?: string }) {
   return (
     <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
       <CircleAlert className="h-6 w-6 text-destructive" />
       <p className="text-sm">Could not load this list.</p>
+      {text && <p className="max-w-md text-xs text-muted-foreground">{text}</p>}
       <motion.div whileTap={{ scale: 0.97 }}>
         <Button size="sm" variant="outline" onClick={onRetry} className="gap-1.5">
           <RefreshCw className="h-3.5 w-3.5" /> Try again

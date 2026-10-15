@@ -43,6 +43,8 @@ export const CRM_MODULES = [
   "balancePayments",
   /* Inactive leads (2026-10-15): view the page, edit to move leads on. The Super Admin's until given. */
   "inactive-leads",
+  /* Activity (2026-10-15): who is here, sign-ins, idle alerts, the HRMS shift and clock-ins. The Super Admin's until given. */
+  "activity",
 ] as const;
 
 export type CrmModule = (typeof CRM_MODULES)[number];
@@ -68,6 +70,7 @@ export const MODULE_LABELS: Record<CrmModule, string> = {
   calls: "Calls (3CX)",
   balancePayments: "Balance payments",
   "inactive-leads": "Inactive Leads",
+  activity: "Activity",
 };
 
 

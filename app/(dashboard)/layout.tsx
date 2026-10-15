@@ -11,6 +11,7 @@ import { RootPortalHistoryBridge } from "@/components/shared/RootPortalHistoryBr
 import { CallFlowProvider } from "@/components/calls/CallFlow";
 import { SaleCelebration } from "@/components/shared/SaleCelebration";
 import api from "@/lib/axios";
+import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import type { AuthUser } from "@/types";
 
 // The permission a page needs. Most pages share their URL's name with their
@@ -28,6 +29,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { isAuthenticated, hasPermission, updateUser } = useAuthStore();
   const router = useRouter();
   useReminderNotifications();
+  // Every minute the app is open: whether anyone used it — the Activity page and idle alerts.
+  useActivityHeartbeat();
 
   // Permissions are saved at login; refresh them on every app open so role
   // changes reach people without a logout. On failure keep what we have.
