@@ -16,6 +16,7 @@ import {
   TimerOff,
   X,
   RefreshCw,
+  ArrowUpDown,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,7 +37,8 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { INACTIVE_LEADS_KEY, useInactiveLeadTeams, useInactiveLeads, useLeadMoves } from "@/hooks/useInactiveLeads";
 import { MoveLeadsDialog } from "@/components/inactive-leads/MoveLeadsDialog";
 import { CallCountButton, LeadCallsDialog } from "@/components/inactive-leads/LeadCallsDialog";
-import type { AutoMoveState, InactiveLead, InactiveRule, LeadMoveEntry } from "@/types/inactiveLeads";
+import { DayRangeFilter } from "@/components/inactive-leads/DayRangeFilter";
+import type { AutoMoveState, InactiveLead, InactiveRule, InactiveSort, LeadMoveEntry, MovesSort } from "@/types/inactiveLeads";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type Tab = "inactive" | "moves";
@@ -45,6 +47,21 @@ type BadgeVariant = "default" | "secondary" | "warning" | "success" | "destructi
 // ── Constants ──────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20;
 const ALL = "all";
+
+const SORTS: { value: InactiveSort; label: string }[] = [
+  { value: "waiting_desc", label: "Longest waiting" },
+  { value: "waiting_asc", label: "Shortest waiting" },
+  { value: "calls_desc", label: "Most calls" },
+  { value: "calls_asc", label: "Fewest calls" },
+  { value: "moves_desc", label: "Most times moved" },
+  { value: "owner_asc", label: "Owner A–Z" },
+];
+
+const MOVE_SORTS: { value: MovesSort; label: string }[] = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "waited_desc", label: "Longest waited" },
+];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DEFAULT_ZONE = "Asia/Dubai";
 
@@ -168,6 +185,41 @@ export default function InactiveLeadsPage() {
   const [teamId, setTeamId] = useState<string>(ALL);
   const [owner, setOwner] = useState<{ id: string; name: string } | null>(null);
   const [kind, setKind] = useState<string>(ALL);
+  const [sort, setSort] = useState<InactiveSort>("waiting_desc");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [movesSearch, setMovesSearch] = useState("");
+  const [movesQuery, setMovesQuery] = useState("");
+  const [movesSort, setMovesSort] = useState<MovesSort>("newest");
+  const [movedFrom, setMovedFrom] = useState("");
+  const [movedTo, setMovedTo] = useState("");
+  const [urlRead, setUrlRead] = useState(false);
+
+  // Filters live in the address, so a view survives a reload and can be shared as a link.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const g = (k: string) => p.get(k) ?? "";
+    if (g("tab") === "moves") setTab("moves");
+    if (g("q")) { setSearch(g("q")); setQuery(g("q")); }
+    if (g("team")) setTeamId(g("team"));
+    if (SORTS.some((o) => o.value === g("sort"))) setSort(g("sort") as InactiveSort);
+    setDateFrom(g("from")); setDateTo(g("to"));
+    if (g("kind")) setKind(g("kind"));
+    if (g("mq")) { setMovesSearch(g("mq")); setMovesQuery(g("mq")); }
+    if (MOVE_SORTS.some((o) => o.value === g("msort"))) setMovesSort(g("msort") as MovesSort);
+    setMovedFrom(g("mfrom")); setMovedTo(g("mto"));
+    setUrlRead(true);
+  }, []);
+  useEffect(() => {
+    if (!urlRead) return;
+    const p = new URLSearchParams();
+    const put = (k: string, v: string, skip = "") => { if (v && v !== skip) p.set(k, v); };
+    put("tab", tab, "inactive"); put("q", query); put("team", teamId, ALL); put("sort", sort, "waiting_desc");
+    put("from", dateFrom); put("to", dateTo); put("kind", kind, ALL); put("mq", movesQuery);
+    put("msort", movesSort, "newest"); put("mfrom", movedFrom); put("mto", movedTo);
+    const qs = p.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [urlRead, tab, query, teamId, sort, dateFrom, dateTo, kind, movesQuery, movesSort, movedFrom, movedTo]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialogLeads, setDialogLeads] = useState<InactiveLead[] | null>(null);
   const [callsLead, setCallsLead] = useState<InactiveLead | null>(null);
@@ -176,11 +228,27 @@ export default function InactiveLeadsPage() {
     const t = setTimeout(() => setQuery(search.trim()), 350);
     return () => clearTimeout(t);
   }, [search]);
+  useEffect(() => {
+    const t = setTimeout(() => setMovesQuery(movesSearch.trim()), 350);
+    return () => clearTimeout(t);
+  }, [movesSearch]);
 
   // A new filter or page starts from page 1 with nothing ticked.
-  useEffect(() => setPage(1), [query, teamId, owner]);
-  useEffect(() => setSelected(new Set()), [query, teamId, owner, page]);
-  useEffect(() => setMovesPage(1), [kind, teamId]);
+  useEffect(() => setPage(1), [query, teamId, owner, sort, dateFrom, dateTo]);
+  useEffect(() => setSelected(new Set()), [query, teamId, owner, page, sort, dateFrom, dateTo]);
+  useEffect(() => setMovesPage(1), [kind, teamId, movesQuery, movesSort, movedFrom, movedTo]);
+
+  const filtersOn = tab === "inactive"
+    ? Boolean(query || owner || teamId !== ALL || sort !== "waiting_desc" || dateFrom || dateTo)
+    : Boolean(movesQuery || kind !== ALL || teamId !== ALL || movesSort !== "newest" || movedFrom || movedTo);
+  const clearFilters = () => {
+    setTeamId(ALL);
+    if (tab === "inactive") {
+      setSearch(""); setQuery(""); setOwner(null); setSort("waiting_desc"); setDateFrom(""); setDateTo("");
+    } else {
+      setMovesSearch(""); setMovesQuery(""); setKind(ALL); setMovesSort("newest"); setMovedFrom(""); setMovedTo("");
+    }
+  };
 
   const filters = {
     page,
@@ -188,6 +256,9 @@ export default function InactiveLeadsPage() {
     search: query || undefined,
     teamId: teamId === ALL ? undefined : teamId,
     ownerId: owner?.id,
+    sort: sort === "waiting_desc" ? undefined : sort,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
   };
   const { data, isLoading, isFetching, error, refetch } = useInactiveLeads(filters, canView);
   const moves = useLeadMoves(
@@ -196,6 +267,10 @@ export default function InactiveLeadsPage() {
       limit: PAGE_SIZE,
       kind: kind === ALL ? undefined : (kind as "automatic" | "manual"),
       teamId: teamId === ALL ? undefined : teamId,
+      search: movesQuery || undefined,
+      sort: movesSort === "newest" ? undefined : movesSort,
+      dateFrom: movedFrom || undefined,
+      dateTo: movedTo || undefined,
     },
     canView && tab === "moves"
   );
@@ -351,20 +426,30 @@ export default function InactiveLeadsPage() {
 
           {/* On a phone the search takes its own line and the pickers share the next. */}
           <div className="flex flex-wrap items-center gap-2">
-            {tab === "inactive" && (
-              <div className="relative w-full sm:w-56">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative w-full sm:w-56">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              {tab === "inactive" ? (
                 <Input
+                  id="inactive-search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search name or phone"
+                  placeholder="Search name, phone or source"
                   className="h-9 w-full pl-8"
                   aria-label="Search inactive leads"
                 />
-              </div>
-            )}
+              ) : (
+                <Input
+                  id="moves-search"
+                  value={movesSearch}
+                  onChange={(e) => setMovesSearch(e.target.value)}
+                  placeholder="Search lead or person"
+                  className="h-9 w-full pl-8"
+                  aria-label="Search moves"
+                />
+              )}
+            </div>
             <Select value={teamId} onValueChange={setTeamId}>
-              <SelectTrigger className="h-9 min-w-0 flex-1 sm:w-44 sm:flex-none" aria-label="Team">
+              <SelectTrigger className="h-9 min-w-0 grow basis-[calc(50%-0.25rem)] sm:grow-0 sm:basis-auto sm:w-44" aria-label="Team">
                 <SelectValue placeholder="All teams" />
               </SelectTrigger>
               <SelectContent>
@@ -378,7 +463,7 @@ export default function InactiveLeadsPage() {
             </Select>
             {tab === "moves" && (
               <Select value={kind} onValueChange={setKind}>
-                <SelectTrigger className="h-9 min-w-0 flex-1 sm:w-40 sm:flex-none" aria-label="How it moved">
+                <SelectTrigger className="h-9 min-w-0 grow basis-[calc(50%-0.25rem)] sm:grow-0 sm:basis-auto sm:w-40" aria-label="How it moved">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -388,6 +473,42 @@ export default function InactiveLeadsPage() {
                 </SelectContent>
               </Select>
             )}
+            {tab === "inactive" ? (
+              <>
+                <Select value={sort} onValueChange={(v) => setSort(v as InactiveSort)}>
+                  <SelectTrigger className="h-9 min-w-0 grow basis-[calc(50%-0.25rem)] sm:grow-0 sm:basis-auto sm:w-48" aria-label="Sort inactive leads">
+                    <ArrowUpDown className="mr-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORTS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <DayRangeFilter className="w-full sm:w-auto" label="Assigned" from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
+              </>
+            ) : (
+              <>
+                <Select value={movesSort} onValueChange={(v) => setMovesSort(v as MovesSort)}>
+                  <SelectTrigger className="h-9 min-w-0 grow basis-[calc(50%-0.25rem)] sm:grow-0 sm:basis-auto sm:w-44" aria-label="Sort moves">
+                    <ArrowUpDown className="mr-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOVE_SORTS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <DayRangeFilter className="w-full sm:w-auto" label="Moved" from={movedFrom} to={movedTo} onChange={(f, t) => { setMovedFrom(f); setMovedTo(t); }} />
+              </>
+            )}
+            <AnimatePresence>
+              {filtersOn && (
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                  <Button variant="ghost" size="sm" className="h-9 gap-1 text-muted-foreground" onClick={clearFilters}>
+                    <X className="h-3.5 w-3.5" /> Clear filters
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <motion.div whileTap={{ scale: 0.97 }} className="shrink-0">
               <Button
                 variant="ghost"

@@ -62,7 +62,14 @@ export interface InactiveLeadFilters {
   teamId?: string;
   ownerId?: string;
   search?: string;
+  sort?: InactiveSort;
+  /** Assigned between these Dubai days (YYYY-MM-DD). */
+  dateFrom?: string;
+  dateTo?: string;
 }
+
+export type InactiveSort = "waiting_desc" | "waiting_asc" | "calls_desc" | "calls_asc" | "moves_desc" | "owner_asc";
+export type MovesSort = "newest" | "oldest" | "waited_desc";
 
 /** GET /inactive-leads/teams — the page's team filter. */
 export interface FilterTeam {
@@ -97,6 +104,12 @@ export interface LeadMoveFilters {
   limit?: number;
   kind?: "automatic" | "manual";
   teamId?: string;
+  /** Lead name, or who it moved from or to. */
+  search?: string;
+  sort?: MovesSort;
+  /** Moved between these Dubai days (YYYY-MM-DD). */
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 /** POST /inactive-leads/reassign — no `to`: each lead goes to the next person in its team. */
