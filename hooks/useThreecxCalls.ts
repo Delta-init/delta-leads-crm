@@ -66,6 +66,8 @@ export interface CallFilters {
   to: string;
   direction: "all" | "in" | "out";
   result: "all" | "connected" | "missed" | "not_answered";
+  /** Calls with a lead, with a number no lead has, or both (2026-10-16 — every call is kept now). */
+  lead: "all" | "with" | "without";
   person: string; // "all" or a person key
   search: string;
   sort: "date" | "talk" | "ring";
@@ -77,6 +79,7 @@ const params = (f: CallFilters) => ({
   to: f.to || undefined,
   direction: f.direction,
   result: f.result,
+  lead: f.lead === "all" ? undefined : f.lead,
   person: f.person === "all" ? undefined : f.person,
   search: f.search.trim() || undefined,
   sort: f.sort,

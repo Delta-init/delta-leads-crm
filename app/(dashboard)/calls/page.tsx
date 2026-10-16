@@ -80,6 +80,8 @@ export default function CallsPage() {
   const [range, setRange] = useState(() => presetRange("7d"));
   const [direction, setDirection] = useState<CallFilters["direction"]>("all");
   const [result, setResult] = useState<CallFilters["result"]>("all");
+  // Every call is kept now, a lead's or not (2026-10-16): all to start with.
+  const [withLead, setWithLead] = useState<CallFilters["lead"]>("all");
   const [person, setPerson] = useState("all");
   const [searchText, setSearchText] = useState("");
   const [search, setSearch] = useState("");
@@ -94,8 +96,8 @@ export default function CallsPage() {
 
   const sort = SORTS.find((s) => s.id === sortId) ?? SORTS[0]!;
   const filters: CallFilters = useMemo(
-    () => ({ from: range.from, to: range.to, direction, result, person, search, sort: sort.sort, order: sort.order }),
-    [range, direction, result, person, search, sort],
+    () => ({ from: range.from, to: range.to, direction, result, lead: withLead, person, search, sort: sort.sort, order: sort.order }),
+    [range, direction, result, withLead, person, search, sort],
   );
   useEffect(() => setPage(1), [filters]);
 
@@ -113,9 +115,9 @@ export default function CallsPage() {
     setPreset(p);
     if (p !== "custom") setRange(presetRange(p));
   }
-  const hasFilters = direction !== "all" || result !== "all" || person !== "all" || !!searchText;
+  const hasFilters = direction !== "all" || result !== "all" || withLead !== "all" || person !== "all" || !!searchText;
   function clearFilters() {
-    setDirection("all"); setResult("all"); setPerson("all"); setSearchText(""); setSearch("");
+    setDirection("all"); setResult("all"); setWithLead("all"); setPerson("all"); setSearchText(""); setSearch("");
   }
 
   async function exportCsv() {
@@ -223,6 +225,14 @@ export default function CallsPage() {
                 <SelectItem value="connected">Connected</SelectItem>
                 <SelectItem value="missed">Missed</SelectItem>
                 <SelectItem value="not_answered">Not answered</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={withLead} onValueChange={(v) => setWithLead(v as CallFilters["lead"])}>
+              <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All calls</SelectItem>
+                <SelectItem value="with">With a lead</SelectItem>
+                <SelectItem value="without">Without a lead</SelectItem>
               </SelectContent>
             </Select>
             {(named.length > 1 || person !== "all") && (
@@ -334,15 +344,20 @@ export default function CallsPage() {
                 {listQ.isLoading ? (
                   <tr><td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">Loading calls…</td></tr>
                 ) : calls.length === 0 ? (
-                  <tr><td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">{hasFilters ? "No calls match these filters." : "No calls with leads in this period."}</td></tr>
+                  <tr><td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">{hasFilters ? "No calls match these filters." : "No calls in this period."}</td></tr>
                 ) : calls.map((c) => (
                   <tr key={c._id} className="group border-b border-border/50 align-top hover:bg-muted/30">
                     <td className="whitespace-nowrap px-3 py-2.5 text-xs text-foreground">{fmtWhen(c.startedAt)}</td>
                     <td className="px-3 py-2.5">
-                      <Link href={`/leads/${c.leadId}`} className="text-xs font-medium text-primary hover:underline">{c.leadName || "Lead"}</Link>
+                      {c.leadId ? (
+                        <Link href={`/leads/${c.leadId}`} className="text-xs font-medium text-primary hover:underline">{c.leadName || "Lead"}</Link>
+                      ) : (
+                        // A number no lead has (kept since 2026-10-16): the number, no lead to open or call from.
+                        <span className="text-xs text-muted-foreground">No lead</span>
+                      )}
                       <div className="flex items-center gap-1">
                         <span className="font-mono text-[11px] text-muted-foreground">{c.number}</span>
-                        <ClickToCall phoneNumber={c.number} leadId={c.leadId} leadName={c.leadName} size="icon" variant="ghost" className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100" />
+                        {c.leadId && <ClickToCall phoneNumber={c.number} leadId={c.leadId} leadName={c.leadName} size="icon" variant="ghost" className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100" />}
                       </div>
                     </td>
                     <td className="px-3 py-2.5"><CallResult call={c} /></td>
