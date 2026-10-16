@@ -2,7 +2,13 @@
 export interface AppSettings {
   key: "app";
   /** enabledAt: when automatic moves were last switched on (set by the server) — only leads assigned since then move on their own. */
-  inactiveLeads: { autoReassign: boolean; limitMinutes: number; enabledAt: string | null };
+  inactiveLeads: {
+    autoReassign: boolean;
+    limitMinutes: number;
+    enabledAt: string | null;
+    /** Lead sources the automatic mover never moves. */
+    excludedSources?: string[];
+  };
   idleAlerts: { enabled: boolean; limitMinutes: number; notifyTeamLeaders: boolean };
   workingHours: { timezone: string; days: number[]; start: string; end: string };
   updatedBy: string | null;

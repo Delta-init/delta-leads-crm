@@ -84,6 +84,11 @@ const AUTO_MOVE: Record<AutoMoveState, { label: string; hint: string; variant: B
     variant: "warning",
   },
   no_team: { label: "No team", hint: "It is not in a team, so nobody can take it automatically — pick a person.", variant: "warning" },
+  excluded_source: {
+    label: "Not moved · source",
+    hint: "Its source is set never to move automatically (Settings → Automation) — move it by hand if needed.",
+    variant: "secondary",
+  },
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -905,7 +910,7 @@ function LeadRow({ lead, rule, canMove, ticked, onTick, onOwner, onMove, onCalls
 function LeadCard({ lead, rule, canMove, ticked, onTick, onOwner, onMove, onCalls }: LeadRowProps) {
   const { auto, label, late } = autoMoveOf(lead, rule);
   // Why it won't move on its own, written out — a touch screen has no hover for the tooltip.
-  const explain = lead.autoMove === "before_switch" || lead.autoMove === "stuck" || lead.autoMove === "no_team";
+  const explain = lead.autoMove === "before_switch" || lead.autoMove === "stuck" || lead.autoMove === "no_team" || lead.autoMove === "excluded_source";
 
   return (
     <motion.li variants={listItemVariants} className={cn("flex gap-3 px-4 py-3", ticked && "bg-primary/5")}>

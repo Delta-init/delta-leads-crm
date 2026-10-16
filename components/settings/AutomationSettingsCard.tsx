@@ -15,6 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useAppSettings, useUpdateAppSettings } from "@/hooks/useAppSettings";
+import { useLeadSources } from "@/hooks/useLeads";
+import { SearchableMultiSelect } from "@/components/shared/SearchableSelect";
 import type { AppSettings } from "@/types/settings";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -59,7 +61,11 @@ const minutesOf = (hhmm: string) => {
 };
 
 const draftOf = (s: AppSettings): Draft => ({
-  inactiveLeads: { autoReassign: s.inactiveLeads.autoReassign, limitMinutes: s.inactiveLeads.limitMinutes },
+  inactiveLeads: {
+    autoReassign: s.inactiveLeads.autoReassign,
+    limitMinutes: s.inactiveLeads.limitMinutes,
+    excludedSources: [...(s.inactiveLeads.excludedSources ?? [])].sort(),
+  },
   idleAlerts: { ...s.idleAlerts },
   workingHours: { ...s.workingHours, days: [...s.workingHours.days] },
 });
@@ -84,6 +90,7 @@ export function AutomationSettingsCard() {
   const canEdit = canView && hasPermission("settings", "edit");
   const { data, isLoading, error } = useAppSettings(canView);
   const save = useUpdateAppSettings();
+  const { data: sourceList = [] } = useLeadSources();
 
   const [draft, setDraft] = useState<Draft | null>(null);
   useEffect(() => {
@@ -186,6 +193,23 @@ export function AutomationSettingsCard() {
               disabled={!canEdit}
               maxHours={168}
             />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">Never move leads from these sources</p>
+            <SearchableMultiSelect
+              values={draft.inactiveLeads.excludedSources ?? []}
+              onChange={(v) => set("inactiveLeads", { excludedSources: [...v].sort() })}
+              options={Array.from(new Set([...sourceList.map((x) => x.toUpperCase()), ...(draft.inactiveLeads.excludedSources ?? [])]))
+                .sort()
+                .map((x) => ({ value: x, label: x, disabled: !canEdit }))}
+              placeholder="None — every source can move"
+              searchPlaceholder="Search sources…"
+              noun="sources"
+              className="max-w-md"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Their leads still show on the Inactive Leads page, marked &ldquo;Not moved · source&rdquo;, and can be moved by hand.
+            </p>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>
