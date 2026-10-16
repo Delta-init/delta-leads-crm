@@ -22,7 +22,8 @@ self.addEventListener("push", (event) => {
   const title = payload.title ?? "Delta";
   // Lead assignments stay on screen until tapped and re-alert (default
   // system sound) even when an older one with the same tag is still showing.
-  const isLead = payload.data?.type === "lead_assigned";
+  // Lead assignments and target warnings stay until tapped (target warnings: the user, 2026-10-16).
+  const isLead = payload.data?.type === "lead_assigned" || payload.data?.type === "target_warning";
   const options = {
     body:    payload.body  ?? "",
     icon:    "/icons/icon-192.png",

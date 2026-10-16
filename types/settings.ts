@@ -10,6 +10,14 @@ export interface AppSettings {
     excludedSources?: string[];
   };
   idleAlerts: { enabled: boolean; limitMinutes: number; notifyTeamLeaders: boolean };
+  /** Hourly warning while collections are below the daily target (AED). */
+  dailyTarget: {
+    enabled: boolean;
+    teamTarget: number;
+    departmentTarget: number;
+    notifyTeamLeaders: boolean;
+    notifySalesManager: boolean;
+  };
   workingHours: { timezone: string; days: number[]; start: string; end: string };
   updatedBy: string | null;
   updatedAt: string | null;
@@ -24,4 +32,5 @@ export type AppSettingsUpdate = Partial<{
   inactiveLeads: Partial<Omit<AppSettings["inactiveLeads"], "enabledAt">>;
   idleAlerts: Partial<AppSettings["idleAlerts"]>;
   workingHours: Partial<AppSettings["workingHours"]>;
+  dailyTarget: Partial<AppSettings["dailyTarget"]>;
 }>;

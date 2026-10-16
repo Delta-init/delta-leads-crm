@@ -10,6 +10,7 @@ import { useSyncedCurrency } from "@/hooks/useSyncedCurrency";
 import { CurrencyRedraw } from "@/components/shared/CurrencyRedraw";
 import { RecentPageTracker } from "@/components/shared/CommandPalette";
 import { RootPortalHistoryBridge } from "@/components/shared/RootPortalHistoryBridge";
+import { TargetWarningDialog } from "@/components/notifications/TargetWarningDialog";
 import { CallFlowProvider } from "@/components/calls/CallFlow";
 import { SaleCelebration } from "@/components/shared/SaleCelebration";
 import api from "@/lib/axios";
@@ -83,6 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <CallFlowProvider>
     <div className="flex h-dvh overflow-hidden bg-slate-200 dark:bg-background pwa-safe-top">
       <RootPortalHistoryBridge />
+      <TargetWarningDialog />
       <RecentPageTracker />
       <SaleCelebration />
       <Sidebar />

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { Zap, Timer, Clock, Loader2, Save, Info, ArrowRight, Coffee } from "lucide-react";
+import { Zap, Timer, Clock, Loader2, Save, Info, ArrowRight, Coffee, Target } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import type { AppSettings } from "@/types/settings";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 /** What the page edits — enabledAt is the server's to set. */
-type Draft = Pick<AppSettings, "idleAlerts" | "workingHours"> & {
+type Draft = Pick<AppSettings, "idleAlerts" | "workingHours" | "dailyTarget"> & {
   inactiveLeads: Omit<AppSettings["inactiveLeads"], "enabledAt">;
 };
 
@@ -67,6 +67,13 @@ const draftOf = (s: AppSettings): Draft => ({
     excludedSources: [...(s.inactiveLeads.excludedSources ?? [])].sort(),
   },
   idleAlerts: { ...s.idleAlerts },
+  dailyTarget: {
+    enabled: s.dailyTarget?.enabled ?? false,
+    teamTarget: s.dailyTarget?.teamTarget ?? 7500,
+    departmentTarget: s.dailyTarget?.departmentTarget ?? 22500,
+    notifyTeamLeaders: s.dailyTarget?.notifyTeamLeaders ?? true,
+    notifySalesManager: s.dailyTarget?.notifySalesManager ?? true,
+  },
   workingHours: { ...s.workingHours, days: [...s.workingHours.days] },
 });
 
@@ -107,6 +114,7 @@ export function AutomationSettingsCard() {
     const p: string[] = [];
     if (draft.inactiveLeads.limitMinutes < 5) p.push("The inactive-lead limit must be at least 5 minutes.");
     if (draft.inactiveLeads.limitMinutes > 7 * 24 * 60) p.push("The inactive-lead limit can be at most 7 days.");
+    if (!(draft.dailyTarget.teamTarget >= 0) || !(draft.dailyTarget.departmentTarget >= 0)) p.push("Targets can't be negative.");
     if (draft.idleAlerts.limitMinutes < 5) p.push("The idle limit must be at least 5 minutes.");
     if (draft.idleAlerts.limitMinutes > 24 * 60) p.push("The idle limit can be at most 24 hours.");
     if (!draft.workingHours.days.length) p.push("Pick at least one working day.");
@@ -271,6 +279,69 @@ export function AutomationSettingsCard() {
               </Link>
             </div>
           )}
+        </Section>
+
+        {/* ── Daily collection target ── */}
+        <Section
+          icon={Target}
+          title="Daily collection target"
+          description="Every working hour (from the hour after the day starts to the hour it ends), warn while today's collections are below target — a pop-up read aloud in the app, in the bell and by push. A team that reaches its target hears nothing more that day. Collections are payments recorded today, counted toward the lead's team."
+        >
+          <div className="flex items-center justify-between gap-4">
+            <Label htmlFor="target-enabled" className="text-sm">Send target warnings</Label>
+            <Switch
+              id="target-enabled"
+              checked={draft.dailyTarget.enabled}
+              onCheckedChange={(v) => set("dailyTarget", { enabled: v })}
+              disabled={!canEdit}
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1">
+              <span className="text-sm text-muted-foreground">Each team, per day (AED)</span>
+              <Input
+                id="target-team"
+                type="number"
+                min={0}
+                step={100}
+                inputMode="numeric"
+                value={draft.dailyTarget.teamTarget}
+                onChange={(e) => set("dailyTarget", { teamTarget: e.target.value === "" ? 0 : Number(e.target.value) })}
+                disabled={!canEdit}
+                className="h-9 max-w-[12rem] tabular-nums"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-sm text-muted-foreground">All teams together, per day (AED)</span>
+              <Input
+                id="target-department"
+                type="number"
+                min={0}
+                step={100}
+                inputMode="numeric"
+                value={draft.dailyTarget.departmentTarget}
+                onChange={(e) => set("dailyTarget", { departmentTarget: e.target.value === "" ? 0 : Number(e.target.value) })}
+                disabled={!canEdit}
+                className="h-9 max-w-[12rem] tabular-nums"
+              />
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={draft.dailyTarget.notifyTeamLeaders}
+              onCheckedChange={(v) => set("dailyTarget", { notifyTeamLeaders: v === true })}
+              disabled={!canEdit}
+            />
+            Warn each team&apos;s leader about their team
+          </label>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={draft.dailyTarget.notifySalesManager}
+              onCheckedChange={(v) => set("dailyTarget", { notifySalesManager: v === true })}
+              disabled={!canEdit}
+            />
+            Warn the Sales Manager (and Commission &ldquo;sees everything&rdquo; people) about the department
+          </label>
         </Section>
 
         {/* ── Working hours ── */}
