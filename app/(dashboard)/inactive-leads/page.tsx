@@ -69,7 +69,7 @@ const DEFAULT_ZONE = "Asia/Dubai";
 const AUTO_MOVE: Record<AutoMoveState, { label: string; hint: string; variant: BadgeVariant }> = {
   due: {
     label: "Moves automatically",
-    hint: "Goes to the next person in its team at the next check — every minute, in working hours.",
+    hint: "Goes to the next person in its team at the next check — every minute, in the moving hours.",
     variant: "default",
   },
   off: { label: "Automatic off", hint: "Automatic moves are off in Settings — move it by hand.", variant: "secondary" },
@@ -84,6 +84,11 @@ const AUTO_MOVE: Record<AutoMoveState, { label: string; hint: string; variant: B
     variant: "warning",
   },
   no_team: { label: "No team", hint: "It is not in a team, so nobody can take it automatically — pick a person.", variant: "warning" },
+  on_break: {
+    label: "Owner on a break",
+    hint: "Its owner is on a break: it waits until they're back, and the break doesn't count towards the limit. Move it by hand if needed.",
+    variant: "secondary",
+  },
   excluded_source: {
     label: "Not moved · source",
     hint: "Its source is set never to move automatically (Settings → Automation) — move it by hand if needed.",
@@ -149,7 +154,7 @@ function limitWords(total: number): string {
 
 function ruleSentence(rule: InactiveRule): string {
   const wh = rule.workingHours;
-  return `${limitWords(rule.limitMinutes)} of working time (${daysLabel(wh.days)}, ${wh.start}–${wh.end} ${zoneLabel(wh.timezone)})`;
+  return `${limitWords(rule.limitMinutes)} of working time (${daysLabel(wh.days)}, ${wh.start}–${wh.end} ${zoneLabel(wh.timezone)}, breaks not counted)`;
 }
 
 /** What the automatic mover will do with a lead, as a row and a card both show it. */
@@ -910,7 +915,7 @@ function LeadRow({ lead, rule, canMove, ticked, onTick, onOwner, onMove, onCalls
 function LeadCard({ lead, rule, canMove, ticked, onTick, onOwner, onMove, onCalls }: LeadRowProps) {
   const { auto, label, late } = autoMoveOf(lead, rule);
   // Why it won't move on its own, written out — a touch screen has no hover for the tooltip.
-  const explain = lead.autoMove === "before_switch" || lead.autoMove === "stuck" || lead.autoMove === "no_team" || lead.autoMove === "excluded_source";
+  const explain = lead.autoMove === "before_switch" || lead.autoMove === "stuck" || lead.autoMove === "no_team" || lead.autoMove === "excluded_source" || lead.autoMove === "on_break";
 
   return (
     <motion.li variants={listItemVariants} className={cn("flex gap-3 px-4 py-3", ticked && "bg-primary/5")}>

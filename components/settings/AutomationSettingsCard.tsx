@@ -65,6 +65,8 @@ const draftOf = (s: AppSettings): Draft => ({
     autoReassign: s.inactiveLeads.autoReassign,
     limitMinutes: s.inactiveLeads.limitMinutes,
     excludedSources: [...(s.inactiveLeads.excludedSources ?? [])].sort(),
+    // Only from a server that has them — an older one would refuse the field.
+    ...(s.inactiveLeads.hours ? { hours: { ...s.inactiveLeads.hours } } : {}),
   },
   idleAlerts: { ...s.idleAlerts },
   dailyTarget: {
@@ -114,6 +116,9 @@ export function AutomationSettingsCard() {
     const p: string[] = [];
     if (draft.inactiveLeads.limitMinutes < 5) p.push("The inactive-lead limit must be at least 5 minutes.");
     if (draft.inactiveLeads.limitMinutes > 7 * 24 * 60) p.push("The inactive-lead limit can be at most 7 days.");
+    const mh = draft.inactiveLeads.hours;
+    if (mh && (!HHMM.test(mh.start) || !HHMM.test(mh.end))) p.push("Set both moving-hour times.");
+    else if (mh && minutesOf(mh.end) <= minutesOf(mh.start)) p.push("Moving hours must end after they start.");
     if (!(draft.dailyTarget.teamTarget >= 0) || !(draft.dailyTarget.departmentTarget >= 0)) p.push("Targets can't be negative.");
     if (draft.idleAlerts.limitMinutes < 5) p.push("The idle limit must be at least 5 minutes.");
     if (draft.idleAlerts.limitMinutes > 24 * 60) p.push("The idle limit can be at most 24 hours.");
@@ -181,7 +186,9 @@ export function AutomationSettingsCard() {
         <Section
           icon={Timer}
           title="Inactive leads"
-          description="A lead counts as acted on when its owner changes the status, adds a note, logs a follow-up or a call, or sets a reminder. The clock only runs in working hours."
+          description={draft.inactiveLeads.hours
+            ? "A lead counts as acted on when its owner changes the status, adds a note, logs a follow-up or a call, or sets a reminder. The clock only runs in the moving hours below, on the working days, and stops while the lead's owner is on a break — nothing of theirs moves until they're back."
+            : "A lead counts as acted on when its owner changes the status, adds a note, logs a follow-up or a call, or sets a reminder. The clock only runs in working hours."}
         >
           <div className="flex items-center justify-between gap-4">
             <Label htmlFor="auto-reassign" className="text-sm">Move leads nobody acted on to the next team member</Label>
@@ -202,6 +209,29 @@ export function AutomationSettingsCard() {
               maxHours={168}
             />
           </div>
+          {draft.inactiveLeads.hours && (
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className="text-sm text-muted-foreground">Count and move only between</span>
+              <Input
+                type="time"
+                aria-label="Moving hours start"
+                value={draft.inactiveLeads.hours.start}
+                onChange={(e) => set("inactiveLeads", { hours: { ...draft.inactiveLeads.hours!, start: e.target.value } })}
+                disabled={!canEdit}
+                className="w-28 sm:w-32"
+              />
+              <span className="text-sm text-muted-foreground">and</span>
+              <Input
+                type="time"
+                aria-label="Moving hours end"
+                value={draft.inactiveLeads.hours.end}
+                onChange={(e) => set("inactiveLeads", { hours: { ...draft.inactiveLeads.hours!, end: e.target.value } })}
+                disabled={!canEdit}
+                className="w-28 sm:w-32"
+              />
+              <span className="text-xs text-muted-foreground">on the working days, in their time zone</span>
+            </div>
+          )}
           <div className="space-y-1.5">
             <p className="text-sm font-medium">Never move leads from these sources</p>
             <SearchableMultiSelect
@@ -345,7 +375,9 @@ export function AutomationSettingsCard() {
         </Section>
 
         {/* ── Working hours ── */}
-        <Section icon={Clock} title="Working hours" description="Both clocks above only run inside these hours, in this time zone — by default the main shift, 10:00–19:00 GST, Monday to Saturday.">
+        <Section icon={Clock} title="Working hours" description={draft.inactiveLeads.hours
+          ? "Idle alerts only run inside these hours, in this time zone — by default the main shift, 10:00–19:00 GST, Monday to Saturday. Inactive leads use these days and time zone with their own moving hours (above)."
+          : "Both clocks above only run inside these hours, in this time zone — by default the main shift, 10:00–19:00 GST, Monday to Saturday."}>
           <div className="flex flex-wrap gap-1.5">
             {DAYS.map((label, day) => {
               const on = draft.workingHours.days.includes(day);

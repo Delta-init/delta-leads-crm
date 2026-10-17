@@ -8,6 +8,11 @@ export interface AppSettings {
     enabledAt: string | null;
     /** Lead sources the automatic mover never moves. */
     excludedSources?: string[];
+    /**
+     * The hours inactive leads count and move in (12:30–20:00 GST by default), on the working days. Absent from a
+     * server older than 2026-10-17, which counted in the working hours.
+     */
+    hours?: { start: string; end: string };
   };
   idleAlerts: { enabled: boolean; limitMinutes: number; notifyTeamLeaders: boolean };
   /** Hourly warning while collections are below the daily target (AED). */
