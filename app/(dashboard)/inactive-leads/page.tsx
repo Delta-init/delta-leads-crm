@@ -18,6 +18,7 @@ import {
   RefreshCw,
   ArrowUpDown,
   Phone,
+  Workflow,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,10 +40,11 @@ import { INACTIVE_LEADS_KEY, useInactiveLeadTeams, useInactiveLeads, useLeadMove
 import { MoveLeadsDialog } from "@/components/inactive-leads/MoveLeadsDialog";
 import { CallCountButton, LeadCallsDialog } from "@/components/inactive-leads/LeadCallsDialog";
 import { DayRangeFilter } from "@/components/inactive-leads/DayRangeFilter";
+import { LeadWorkflowView } from "@/components/inactive-leads/LeadWorkflow";
 import type { AutoMoveState, InactiveLead, InactiveRule, InactiveSort, LeadMoveEntry, MovesSort } from "@/types/inactiveLeads";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type Tab = "inactive" | "moves";
+type Tab = "inactive" | "moves" | "workflow";
 type BadgeVariant = "default" | "secondary" | "warning" | "success" | "destructive" | "outline";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -211,7 +213,7 @@ export default function InactiveLeadsPage() {
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const g = (k: string) => p.get(k) ?? "";
-    if (g("tab") === "moves") setTab("moves");
+    if (g("tab") === "moves" || g("tab") === "workflow") setTab(g("tab") as Tab);
     if (g("q")) { setSearch(g("q")); setQuery(g("q")); }
     if (g("team")) setTeamId(g("team"));
     if (SORTS.some((o) => o.value === g("sort"))) setSort(g("sort") as InactiveSort);
@@ -413,6 +415,7 @@ export default function InactiveLeadsPage() {
             {([
               { key: "inactive", label: "Inactive now", icon: Hourglass },
               { key: "moves", label: "Moves log", icon: History },
+              { key: "workflow", label: "Workflow", icon: Workflow },
             ] as const).map((t) => (
               <motion.button
                 key={t.key}
@@ -438,7 +441,8 @@ export default function InactiveLeadsPage() {
             ))}
           </div>
 
-          {/* On a phone the search takes its own line and the pickers share the next. */}
+          {/* On a phone the search takes its own line and the pickers share the next. The Workflow tab has its own. */}
+          {tab !== "workflow" && (
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-full sm:w-56">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -546,7 +550,11 @@ export default function InactiveLeadsPage() {
               </Button>
             </motion.div>
           </div>
+          )}
         </div>
+
+        {/* ── Workflow ── */}
+        {tab === "workflow" && <LeadWorkflowView teams={teams} />}
 
         <AnimatePresence>
           {owner && tab === "inactive" && (
