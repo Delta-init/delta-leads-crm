@@ -8,7 +8,8 @@ export type AutoMoveState =
   | "before_switch" // assigned before they were switched on — move it by hand
   | "stuck" //         nobody left in the team to take it
   | "no_team" | "excluded_source" //      it has no team to move within
-  | "on_break"; //      its owner is on a break — it waits, and the break doesn't count
+  | "on_break" //      its owner is on a break — it waits, and the break doesn't count
+  | "on_call"; //      its owner is on a 3CX call now — it waits, and call time doesn't count
 
 export interface PersonRef {
   id: string;
