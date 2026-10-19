@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Bell, BellOff, X, CheckCircle2, UserCheck,
+  Bell, BellOff, X, CheckCircle2, UserCheck, UserPlus,
   MessageCircle, StickyNote, ExternalLink, Loader2,
   ArrowRightLeft, AlertTriangle, Coffee, Target,
 } from "lucide-react";
@@ -54,6 +54,7 @@ const fromStored = (n: AppNotificationDTO): AppNotification => ({ ...n, url: n.u
 
 const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   lead_assigned:  { icon: UserCheck,     color: "text-teal-400",   bg: "bg-teal-500/15"   },
+  new_lead:       { icon: UserPlus,      color: "text-sky-400",    bg: "bg-sky-500/15"    },
   team_message:   { icon: MessageCircle, color: "text-blue-400",   bg: "bg-blue-500/15"   },
   status_changed: { icon: CheckCircle2,  color: "text-violet-400", bg: "bg-violet-500/15" },
   note_added:     { icon: StickyNote,    color: "text-green-400",  bg: "bg-green-500/15"  },
@@ -314,7 +315,8 @@ export function NotificationBell() {
         read: false,
         stored: Boolean(payload.id),
       };
-      const isLead = notif.type === "lead_assigned";
+      // A lead given to them, or a new lead in (2026-10-19): the lead sound, and the toast stays longer.
+      const isLead = notif.type === "lead_assigned" || notif.type === "new_lead";
       // The new-lead sound for a lead; the other sound for anything else.
       playAlertSound(isLead ? "lead" : "other");
       setNotifications((prev) => mergeNotifications([notif], prev));
