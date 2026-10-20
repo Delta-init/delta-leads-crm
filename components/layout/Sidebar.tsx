@@ -31,6 +31,7 @@ import {
   HandCoins,
   Hourglass,
   Activity,
+  DoorOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -78,6 +79,8 @@ export const navItems: { href: string; label: string; icon: React.ElementType; p
   { href: "/leaderboard",label: "Leaderboard",       icon: Trophy,          permModule: "leaderboard" },
   { href: "/my-pay",    label: "My Pay",             icon: Wallet,          permModule: "pay" },
   { href: "/mentors",   label: "Mentors",            icon: CalendarDays,    permModule: "mentors" },
+  /* The office's meeting rooms, booked through the HRMS (2026-10-19) — open to everyone signed in. */
+  { href: "/meeting-rooms", label: "Meeting rooms", icon: DoorOpen, permModule: null },
   { href: "/students",  label: "Students",           icon: GraduationCap,   permModule: "students"  },
   { href: "/roles",     label: "Roles & Permissions",icon: Shield,          permModule: "roles"     },
   { href: "/settings",  label: "Settings",           icon: Settings,        permModule: null        },
