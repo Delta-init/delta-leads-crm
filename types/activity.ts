@@ -139,6 +139,8 @@ export interface AttendancePerson {
   wfh: boolean;
   now: AttendanceNow | null;
   breakSince: string | null;
+  /** What the break going on now is for: meeting, lunch, tea, washroom (null when not said). */
+  breakKind?: string | null;
 }
 
 export interface AttendanceDay {

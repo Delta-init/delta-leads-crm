@@ -7,6 +7,7 @@ import { EmptyState, ErrorState, TableSkeleton } from "@/components/shared/ListS
 import { cn } from "@/lib/utils";
 import { listContainerVariants, listItemVariants } from "@/lib/animations";
 import type { AttendanceDay, AttendancePerson, AttendanceShift } from "@/types/activity";
+import { breakLabel } from "@/lib/breaks";
 
 /*
  * A day's attendance from the HRMS (the user, 2026-10-15): each person's shift, when they clocked in and out —
@@ -67,7 +68,10 @@ export function dayBadge(p: AttendancePerson, today: boolean): { label: string; 
 export function nowBadge(p: AttendancePerson, timeZone: string): { label: string; variant: BadgeVariant } | null {
   switch (p.now) {
     case "in": return { label: "Clocked in", variant: "success" };
-    case "break": return { label: p.breakSince ? `On a break · since ${clockAt(p.breakSince, timeZone)}` : "On a break", variant: "warning" };
+    case "break": {
+      const what = p.breakKind ? breakLabel(p.breakKind) : "On a break";
+      return { label: p.breakSince ? `${what} · since ${clockAt(p.breakSince, timeZone)}` : what, variant: "warning" };
+    }
     case "out": return { label: p.firstIn ? "Clocked out" : p.workDay === false ? "Day off" : "Not clocked in", variant: "outline" };
     case "leave": return { label: "On leave", variant: "secondary" };
     default: return null;
