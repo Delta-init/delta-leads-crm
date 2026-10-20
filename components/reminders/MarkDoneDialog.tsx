@@ -23,7 +23,6 @@ import { LEAD_STATUSES, STATUS_META, type LeadStatus } from "@/lib/statusConfig"
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store/authStore";
-import type { Reminder } from "@/types/lead";
 
 /* ────────────────────────────────────────────────────────────────────────────
    Mark a reminder done — with a word on what happened (2026-10-20).
@@ -235,7 +234,14 @@ function MarkDoneFlow({ target, onClose }: { target: MarkDoneTarget; onClose: ()
 }
 
 /** On a done reminder: what happened, when and by whom — quietly, under its note. */
-export function DoneNote({ reminder }: { reminder: Pick<Reminder, "doneNote" | "doneAt" | "doneBy"> }) {
+/** Anything with a done note — a lead's reminder or a team list's (doneBy by name or by id). */
+interface DoneInfo {
+  doneNote?: string;
+  doneAt?: string | null;
+  doneBy?: { name?: string } | string | null;
+}
+
+export function DoneNote({ reminder }: { reminder: DoneInfo }) {
   const me = useAuthStore((st) => st.user?._id);
   const by = reminder.doneBy;
   const who = !by ? "" : typeof by === "object" ? by.name : by === me ? "you" : "";

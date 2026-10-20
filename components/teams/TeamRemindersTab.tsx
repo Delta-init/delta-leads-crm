@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useTeamReminders, type TeamRemindersFilters } from "@/hooks/useTeams";
 import type { TeamReminderItem } from "@/types/team";
+import { DoneNote } from "@/components/reminders/MarkDoneDialog";
 
 // ─── Status badge helper ───────────────────────────────────────────────────────
 
@@ -304,6 +305,11 @@ function ReminderRow({ item }: { item: TeamReminderItem }) {
 
         {reminder.note && (
           <p className="text-xs text-muted-foreground mb-1.5 line-clamp-1">{reminder.note}</p>
+        )}
+        {reminder.isDone && (
+          <div className="mb-1.5">
+            <DoneNote reminder={reminder} />
+          </div>
         )}
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">

@@ -129,6 +129,10 @@ export interface TeamReminderItem {
     remindAt: string;
     isDone: boolean;
     createdBy?: { _id: string; name: string } | string;
+    /** Marking done needs a note: what happened, when, and who. */
+    doneNote?: string;
+    doneAt?: string | null;
+    doneBy?: { _id: string; name: string } | string | null;
     notifiedAt?: string;
     warnedAt?: string;
     createdAt?: string;
