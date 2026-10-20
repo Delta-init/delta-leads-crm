@@ -45,6 +45,12 @@ export const useLeads = (filters?: LeadFilters) => {
       if (filters?.demoAttended)  params.demoAttended  = filters.demoAttended;
       if (filters?.followupFrom)  params.followupFrom  = filters.followupFrom;
       if (filters?.followupTo)    params.followupTo    = filters.followupTo;
+      if (filters?.assignVia)            params.assignVia            = filters.assignVia;
+      if (filters?.initialLeadResponse)  params.initialLeadResponse  = filters.initialLeadResponse;
+      if (filters?.primaryConcern)       params.primaryConcern       = filters.primaryConcern;
+      if (filters?.followupStrategyType) params.followupStrategyType = filters.followupStrategyType;
+      if (filters?.exactConcern)         params.exactConcern         = filters.exactConcern;
+      if (filters?.exactConcernText)     params.exactConcernText     = filters.exactConcernText;
       const response = await api.get<ApiResponse<Lead[]>>("/leads", { params });
       return { data: response.data.data ?? [], pagination: response.data.pagination };
     },
@@ -59,6 +65,24 @@ export const useLeadSources = () => {
       return response.data.data ?? [];
     },
     staleTime: 5 * 60 * 1000, // cache for 5 min
+  });
+};
+
+/** Joins picked exact concerns in ?exactConcern= — the values are free text and may hold commas. */
+export const EXACT_CONCERN_SEPARATOR = "|~|";
+
+export interface ExactConcernOption { value: string; count: number }
+
+/** The exact concerns on the leads this person may see, most frequent first (max 300). */
+export const useExactConcerns = (enabled = true) => {
+  return useQuery({
+    queryKey: [...LEADS_KEY, "exact-concerns"],
+    queryFn: async () => {
+      const response = await api.get<ApiResponse<ExactConcernOption[]>>("/leads/exact-concerns");
+      return response.data.data ?? [];
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
   });
 };
 

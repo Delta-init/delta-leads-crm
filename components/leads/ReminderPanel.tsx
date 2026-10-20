@@ -18,6 +18,7 @@ import type { Reminder } from "@/types/lead";
 import {
   useAddReminder, useUpdateReminder, useDeleteReminder,
 } from "@/hooks/useReminders";
+import { MarkDoneDialog, DoneNote, type MarkDoneTarget } from "@/components/reminders/MarkDoneDialog";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -152,12 +153,15 @@ interface ReminderPanelProps {
   leadId: string;
   reminders: Reminder[];
   canEdit: boolean;
+  /** Shown in the "Mark reminder done" dialog */
+  leadName?: string;
 }
 
-export function ReminderPanel({ leadId, reminders, canEdit }: ReminderPanelProps) {
+export function ReminderPanel({ leadId, reminders, canEdit, leadName }: ReminderPanelProps) {
   const [adding,        setAdding]        = useState(false);
   const [editingId,     setEditingId]     = useState<string | null>(null);
   const [deleteId,      setDeleteId]      = useState<string | null>(null);
+  const [marking,       setMarking]       = useState<MarkDoneTarget | null>(null);
 
   const addMut    = useAddReminder(leadId);
   const updateMut = useUpdateReminder(leadId);
@@ -266,6 +270,7 @@ export function ReminderPanel({ leadId, reminders, canEdit }: ReminderPanelProps
                         {r.note && (
                           <p className="text-xs text-muted-foreground leading-snug">{r.note}</p>
                         )}
+                        {r.isDone && <DoneNote reminder={r} />}
                         <div className="flex items-center gap-1.5 flex-wrap mt-1">
                           <Clock className={cn("h-3 w-3 shrink-0", styles.icon)} />
                           <span className="text-xs text-muted-foreground">{formatReminderTime(r.remindAt)}</span>
@@ -285,9 +290,11 @@ export function ReminderPanel({ leadId, reminders, canEdit }: ReminderPanelProps
                               r.isDone ? "text-muted-foreground" : "text-green-400 hover:text-green-300",
                             )}
                             title={r.isDone ? "Mark undone" : "Mark done"}
-                            onClick={() =>
-                              updateMut.mutate({ reminderId: r._id, data: { isDone: !r.isDone } })
-                            }
+                            onClick={() => {
+                              // Done needs a note (the dialog); reopening is one click
+                              if (r.isDone) updateMut.mutate({ reminderId: r._id, data: { isDone: false } });
+                              else setMarking({ leadId, leadName, reminderId: r._id, title: r.title });
+                            }}
                           >
                             <Check className="h-3.5 w-3.5" />
                           </Button>
@@ -317,6 +324,8 @@ export function ReminderPanel({ leadId, reminders, canEdit }: ReminderPanelProps
           })}
         </AnimatePresence>
       </CardContent>
+
+      <MarkDoneDialog target={marking} onClose={() => setMarking(null)} />
 
       {/* Delete confirm */}
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>

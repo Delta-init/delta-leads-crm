@@ -46,6 +46,10 @@ export interface Reminder {
   remindAt: string;
   createdBy: User | string;
   isDone: boolean;
+  /** What happened — written when it was marked done; kept if it is reopened */
+  doneNote?: string;
+  doneAt?: string | null;
+  doneBy?: User | string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -142,6 +146,18 @@ export interface LeadFilters {
   splitFrom?: string;
   /** YYYY-MM-DD — leads SPLIT (assigned) on or before this date */
   splitTo?: string;
+  /** "direct" (from the split or by hand) | "moved" (by Inactive Leads) */
+  assignVia?: "direct" | "moved";
+  /** Comma-separated; "none" = not set */
+  initialLeadResponse?: string;
+  /** Comma-separated; "none" = not set */
+  primaryConcern?: string;
+  /** Comma-separated; "none" = not set */
+  followupStrategyType?: string;
+  /** Exact values joined with EXACT_CONCERN_SEPARATOR — they may hold commas */
+  exactConcern?: string;
+  /** Exact concern contains this (any case); with exactConcern, either matches */
+  exactConcernText?: string;
   search?: string;
   /** YYYY-MM-DD — leads created on or after this date */
   dateFrom?: string;

@@ -25,6 +25,7 @@ import {
   useTeamReminderOptions, useTeamReminders, type TeamReminder,
 } from "@/hooks/useReminders";
 import { FollowupsSection } from "@/components/reminders/FollowupsSection";
+import { MarkDoneDialog, DoneNote } from "@/components/reminders/MarkDoneDialog";
 import type { ReminderWithLead } from "@/types/lead";
 
 // ── Types & helpers ───────────────────────────────────────────────────────────
@@ -178,6 +179,7 @@ function ReminderCard({
   const { Icon } = cfg;
 
   const updateMut = useUpdateReminder(reminder.lead._id);
+  const [marking, setMarking] = useState(false);   // the "Mark reminder done" dialog
   const isEditing = editingId === reminder._id;
   const setBy     = (reminder as Partial<TeamReminder>).owner?.name;
   const assignee  = reminder.lead.assignedTo && typeof reminder.lead.assignedTo === "object" ? reminder.lead.assignedTo.name : null;
@@ -228,6 +230,7 @@ function ReminderCard({
           {reminder.note && (
             <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{reminder.note}</p>
           )}
+          {reminder.isDone && <DoneNote reminder={reminder} />}
 
           {/* Time + badge */}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -262,7 +265,11 @@ function ReminderCard({
                     : "text-green-400 hover:text-green-300 hover:bg-green-500/10",
                 )}
                 title={reminder.isDone ? "Mark undone" : "Mark done"}
-                onClick={() => updateMut.mutate({ reminderId: reminder._id, data: { isDone: !reminder.isDone } })}
+                onClick={() => {
+                  // Done needs a note (the dialog); reopening is one click
+                  if (reminder.isDone) updateMut.mutate({ reminderId: reminder._id, data: { isDone: false } });
+                  else setMarking(true);
+                }}
               >
                 <Check className="h-3.5 w-3.5" />
               </Button>
@@ -303,6 +310,11 @@ function ReminderCard({
           />
         )}
       </AnimatePresence>
+
+      <MarkDoneDialog
+        target={marking ? { leadId: reminder.lead._id, leadName: reminder.lead.name, reminderId: reminder._id, title: reminder.title } : null}
+        onClose={() => setMarking(false)}
+      />
     </motion.div>
   );
 }

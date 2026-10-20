@@ -716,6 +716,10 @@ export interface MemberSplitRow {
   memberId:       string;
   memberName:     string;
   total:          number;
+  /** From the split or by hand (total − moved) */
+  direct:         number;
+  /** Their current assignment came from an Inactive Leads move */
+  moved:          number;
   closed:         number;
   lost:           number;
   followup:       number;
@@ -740,6 +744,8 @@ export interface MemberSplitReport {
   sourceTable:   SourceTableRow[];
   sourceMembers: string[];
   totalAssigned: number;
+  totalDirect:   number;
+  totalMoved:    number;
 }
 
 export function useMemberSplitReport(params: { teamId?: string; dateFrom?: string; dateTo?: string }) {

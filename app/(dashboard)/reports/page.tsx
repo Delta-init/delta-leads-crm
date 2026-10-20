@@ -1197,6 +1197,9 @@ function LeadSplitTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }
 
 // ── Member Split Panels (sub-component to keep LeadSplitTab readable) ────────
 
+const SPLIT_DIRECT_HINT = "Leads they got from the split or that were assigned to them by hand";
+const SPLIT_MOVED_HINT  = "Leads moved to them by Inactive Leads, after the previous owner took no action";
+
 const MEMBER_PALETTE = [
   "#6366f1","#22c55e","#f97316","#14b8a6","#eab308","#ef4444",
   "#8b5cf6","#3b82f6","#ec4899","#84cc16","#06b6d4","#f43f5e",
@@ -1345,12 +1348,14 @@ function MemberSplitPanels({
 
                 {/* Summary table */}
                 <div className="overflow-x-auto mt-4">
-                  <table className="w-full text-xs" style={{ minWidth: "480px" }}>
+                  <table className="w-full text-xs" style={{ minWidth: "620px" }}>
                     <thead>
                       <tr className="border-b border-border/40">
                         <th className="pb-2 text-left text-muted-foreground font-medium">#</th>
                         <th className="pb-2 text-left text-muted-foreground font-medium">Member</th>
-                        <th className="pb-2 text-right text-muted-foreground font-medium">Assigned</th>
+                        <th className="pb-2 text-right text-muted-foreground font-medium cursor-help" title={SPLIT_DIRECT_HINT}>Assigned</th>
+                        <th className="pb-2 text-right text-amber-500 font-medium cursor-help" title={SPLIT_MOVED_HINT}>Received by move</th>
+                        <th className="pb-2 text-right text-muted-foreground font-medium">Total</th>
                         <th className="pb-2 text-right text-green-500 font-medium">Closed</th>
                         <th className="pb-2 text-right text-red-500 font-medium">Lost</th>
                         <th className="pb-2 text-right text-blue-500 font-medium">Follow-Up</th>
@@ -1376,6 +1381,8 @@ function MemberSplitPanels({
                               <span className="font-medium text-foreground truncate max-w-[140px]">{m.memberName}</span>
                             </div>
                           </td>
+                          <td className="py-2 text-right tabular-nums">{m.direct}</td>
+                          <td className={cn("py-2 text-right tabular-nums", m.moved ? "text-amber-500 font-medium" : "text-muted-foreground")}>{m.moved}</td>
                           <td className="py-2 text-right font-bold tabular-nums">{m.total}</td>
                           <td className="py-2 text-right tabular-nums text-green-500 font-medium">{m.closed}</td>
                           <td className="py-2 text-right tabular-nums text-red-500">{m.lost}</td>
@@ -1400,6 +1407,8 @@ function MemberSplitPanels({
                         <tr className="border-t-2 border-border bg-muted/20">
                           <td />
                           <td className="py-2 font-bold text-foreground">Total</td>
+                          <td className="py-2 text-right font-semibold tabular-nums">{members.reduce((s, m) => s + m.direct, 0)}</td>
+                          <td className="py-2 text-right font-semibold tabular-nums text-amber-500">{members.reduce((s, m) => s + m.moved, 0)}</td>
                           <td className="py-2 text-right font-bold tabular-nums">{members.reduce((s, m) => s + m.total, 0)}</td>
                           <td className="py-2 text-right font-bold tabular-nums text-green-500">{members.reduce((s, m) => s + m.closed, 0)}</td>
                           <td className="py-2 text-right font-semibold tabular-nums text-red-500">{members.reduce((s, m) => s + m.lost, 0)}</td>

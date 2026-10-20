@@ -33,14 +33,14 @@ import { LeadDialog } from "@/components/leads/LeadDialog";
 import { DeleteLeadDialog } from "@/components/leads/DeleteLeadDialog";
 import { AssignLeadDialog } from "@/components/leads/AssignLeadDialog";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
-import { useLeads, useLeadSources, useUpdateLeadStatus, useBulkUpdateLeadStatus, useBulkDeleteLeads, useBulkAssignLeadsToTeam, useUpdateLead } from "@/hooks/useLeads";
+import { useLeads, useLeadSources, useExactConcerns, EXACT_CONCERN_SEPARATOR, useUpdateLeadStatus, useBulkUpdateLeadStatus, useBulkDeleteLeads, useBulkAssignLeadsToTeam, useUpdateLead } from "@/hooks/useLeads";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useUsers } from "@/hooks/useUsers";
 import { useTeams } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
 import { formatDate } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Lead } from "@/types/lead";
+import type { Lead, LeadFilters } from "@/types/lead";
 import type { LeadStatus } from "@/lib/statusConfig";
 import type { User } from "@/types";
 import { INITIAL_RESPONSE_CONFIG, PRIMARY_CONCERN_CONFIG, FOLLOWUP_STRATEGY_CONFIG } from "@/lib/leadConfig";
@@ -61,6 +61,17 @@ import { SearchableMultiSelect } from "@/components/shared/SearchableSelect";
 // URL sync, filter counts and "clear all" stay unchanged
 const toArr = (v: string): string[] => (!v || v === "all" ? [] : v.split(","));
 const fromArr = (a: string[]): string => (a.length ? a.join(",") : "all");
+// Exact concerns are free text and may hold commas, so they travel joined with their own separator
+const toConcerns = (v: string | null): string[] => (v ? v.split(EXACT_CONCERN_SEPARATOR).filter(Boolean) : []);
+
+const NOT_SET = { value: "none", label: "Not set" };
+const ASSIGN_VIA_LABELS: Record<string, string> = {
+  direct: "From the split or by hand",
+  moved:  "Moved by Inactive Leads",
+};
+const optionLabel = (opts: { value: string; label: string }[], v: string) =>
+  v === NOT_SET.value ? NOT_SET.label : opts.find((o) => o.value === v)?.label ?? v;
+const clip = (v: string, n = 40) => (v.length > n ? `${v.slice(0, n - 1)}…` : v);
 
 const THREECX_URL = "https://deltainstitutions.3cx.ae:5002";
 
@@ -170,12 +181,19 @@ function LeadsPageContent() {
   const [followupTo, setFollowupTo] = useState<string>(() => searchParams.get("followupTo") ?? "");
   const [source, setSource] = useState<string>(() => searchParams.get("source") ?? "all");
   const [lostReason, setLostReason] = useState<string>(() => searchParams.get("lostReason") ?? "all");
+  const [assignVia, setAssignVia] = useState<string>(() => searchParams.get("assignVia") ?? "all");
+  const [initialResponse, setInitialResponse] = useState<string>(() => searchParams.get("initialLeadResponse") ?? "all");
+  const [primaryConcern, setPrimaryConcern] = useState<string>(() => searchParams.get("primaryConcern") ?? "all");
+  const [strategyType, setStrategyType] = useState<string>(() => searchParams.get("followupStrategyType") ?? "all");
+  const [exactConcerns, setExactConcerns] = useState<string[]>(() => toConcerns(searchParams.get("exactConcern")));
+  const [concernText, setConcernText] = useState(() => searchParams.get("exactConcernText") ?? "");
+  const [debouncedConcernText, setDebouncedConcernText] = useState(() => searchParams.get("exactConcernText") ?? "");
   const [sortBy, setSortBy] = useState<string>(() => searchParams.get("sortBy") ?? "createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => (searchParams.get("sortOrder") as "asc" | "desc") ?? "desc");
   const [showFilters, setShowFilters] = useState(() => {
     // Auto-open filters panel if any filter param is present in URL
     const sp = searchParams;
-    return !!(sp.get("status") || sp.get("assignedTo") || sp.get("reporter") || sp.get("course") || sp.get("team") || sp.get("from") || sp.get("to") || sp.get("demoScheduled") || sp.get("demoAttended") || sp.get("followupFrom") || sp.get("splitFrom") || sp.get("source"));
+    return !!(sp.get("status") || sp.get("assignedTo") || sp.get("reporter") || sp.get("course") || sp.get("team") || sp.get("from") || sp.get("to") || sp.get("demoScheduled") || sp.get("demoAttended") || sp.get("followupFrom") || sp.get("splitFrom") || sp.get("source") || sp.get("assignVia") || sp.get("initialLeadResponse") || sp.get("primaryConcern") || sp.get("followupStrategyType") || sp.get("exactConcern") || sp.get("exactConcernText"));
   });
 
   // ── View mode — synced to ?view= URL param ────────────────────────────────────
@@ -547,10 +565,16 @@ function LeadsPageContent() {
     if (splitFrom) params.set("splitFrom", splitFrom);
     if (splitTo) params.set("splitTo", splitTo);
     if (followupTo) params.set("followupTo", followupTo);
+    if (assignVia !== "all") params.set("assignVia", assignVia);
+    if (initialResponse !== "all") params.set("initialLeadResponse", initialResponse);
+    if (primaryConcern !== "all") params.set("primaryConcern", primaryConcern);
+    if (strategyType !== "all") params.set("followupStrategyType", strategyType);
+    if (exactConcerns.length) params.set("exactConcern", exactConcerns.join(EXACT_CONCERN_SEPARATOR));
+    if (debouncedConcernText) params.set("exactConcernText", debouncedConcernText);
     if (sortBy !== "createdAt") params.set("sortBy", sortBy);
     if (sortOrder !== "desc") params.set("sortOrder", sortOrder);
     router.replace(`?${params.toString()}`, { scroll: false });
-  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, source, dateFrom, dateTo, demoScheduled, demoAttended, followupFrom, followupTo, splitFrom, splitTo, sortBy, sortOrder]);
+  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, source, dateFrom, dateTo, demoScheduled, demoAttended, followupFrom, followupTo, splitFrom, splitTo, assignVia, initialResponse, primaryConcern, strategyType, exactConcerns, debouncedConcernText, sortBy, sortOrder]);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -580,11 +604,12 @@ function LeadsPageContent() {
   const bulkAssignTeam = useBulkAssignLeadsToTeam();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const concernDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { mutate: updateStatus, mutateAsync: updateStatusAsync, isPending: updateStatusPending } = useUpdateLeadStatus();
   const { mutate: updateLeadField } = useUpdateLead();
 
   // Clear selection when page/filters change
-  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, status, assignedTo, reporter, dateFrom, dateTo, courseId, teamId, source, demoScheduled, demoAttended, followupFrom, followupTo, splitFrom, splitTo]);
+  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, status, assignedTo, reporter, dateFrom, dateTo, courseId, teamId, source, demoScheduled, demoAttended, followupFrom, followupTo, splitFrom, splitTo, assignVia, initialResponse, primaryConcern, strategyType, exactConcerns, debouncedConcernText]);
 
   const toggleId = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -609,6 +634,22 @@ function LeadsPageContent() {
       setDebouncedSearch(val);
       setPage(1);
     }, 400);
+  }
+
+  function handleConcernTextChange(val: string) {
+    setConcernText(val);
+    if (concernDebounceRef.current) clearTimeout(concernDebounceRef.current);
+    concernDebounceRef.current = setTimeout(() => {
+      setDebouncedConcernText(val.trim());
+      setPage(1);
+    }, 400);
+  }
+
+  function clearConcernText() {
+    if (concernDebounceRef.current) clearTimeout(concernDebounceRef.current);
+    setConcernText("");
+    setDebouncedConcernText("");
+    setPage(1);
   }
 
   // Reset page when any filter changes
@@ -639,6 +680,16 @@ function LeadsPageContent() {
     setPage(1);
   }
 
+  // How it was assigned, and what the lead said — for the table and the Kanban alike
+  const assignFilters = useMemo<LeadFilters>(() => ({
+    ...(assignVia === "direct" || assignVia === "moved" ? { assignVia } : {}),
+    ...(initialResponse !== "all" ? { initialLeadResponse: initialResponse } : {}),
+    ...(primaryConcern !== "all" ? { primaryConcern } : {}),
+    ...(strategyType !== "all" ? { followupStrategyType: strategyType } : {}),
+    ...(exactConcerns.length ? { exactConcern: exactConcerns.join(EXACT_CONCERN_SEPARATOR) } : {}),
+    ...(debouncedConcernText ? { exactConcernText: debouncedConcernText } : {}),
+  }), [assignVia, initialResponse, primaryConcern, strategyType, exactConcerns, debouncedConcernText]);
+
   const filters = useMemo(() => ({
     page,
     limit,
@@ -658,15 +709,23 @@ function LeadsPageContent() {
     ...(followupTo ? { followupTo } : {}),
     ...(splitFrom ? { splitFrom } : {}),
     ...(splitTo ? { splitTo } : {}),
+    ...assignFilters,
     sortBy,
     sortOrder,
-  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, source, lostReason, dateFrom, dateTo, demoScheduled, demoAttended, followupFrom, followupTo, splitFrom, splitTo, sortBy, sortOrder]);
+  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, source, lostReason, dateFrom, dateTo, demoScheduled, demoAttended, followupFrom, followupTo, splitFrom, splitTo, assignFilters, sortBy, sortOrder]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
   const { data: usersData } = useUsers({ status: "active", limit: "200" });
   const { data: teamsData } = useTeams({ status: "active", limit: 100 });
   const { data: allCourses = [] } = useAllCourses();
   const { data: allSources = [] } = useLeadSources();
+  const { data: exactConcernList = [] } = useExactConcerns(showFilters || exactConcerns.length > 0);
+  // Picked values stay listed even if they dropped out of the top 300
+  const exactConcernOptions = useMemo(() => {
+    const listed = exactConcernList.map((c) => ({ value: c.value, label: `${clip(c.value)} (${c.count})` }));
+    const missing = exactConcerns.filter((v) => !exactConcernList.some((c) => c.value === v)).map((v) => ({ value: v, label: clip(v) }));
+    return [...missing, ...listed];
+  }, [exactConcernList, exactConcerns]);
 
   const leads = data?.data ?? [];
   const pagination = data?.pagination;
@@ -714,6 +773,12 @@ function LeadsPageContent() {
     !!followupTo,
     !!splitFrom,
     !!splitTo,
+    assignVia !== "all",
+    initialResponse !== "all",
+    primaryConcern !== "all",
+    strategyType !== "all",
+    exactConcerns.length > 0,
+    !!debouncedConcernText,
     !!debouncedSearch,
   ].filter(Boolean).length;
 
@@ -734,6 +799,14 @@ function LeadsPageContent() {
     setDemoAttended("all");
     setFollowupFrom("");
     setFollowupTo("");
+    setAssignVia("all");
+    setInitialResponse("all");
+    setPrimaryConcern("all");
+    setStrategyType("all");
+    setExactConcerns([]);
+    if (concernDebounceRef.current) clearTimeout(concernDebounceRef.current);
+    setConcernText("");
+    setDebouncedConcernText("");
     setSearch("");
     setDebouncedSearch("");
     setPage(1);
@@ -1158,6 +1231,102 @@ function LeadsPageContent() {
                       </Select>
                     </div>
 
+                    {/* Assigned how — from the split (or by hand), or moved by Inactive Leads */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Assigned how</p>
+                      <Select value={assignVia} onValueChange={(v) => applyFilter(setAssignVia, v)}>
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder="All" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="direct">{ASSIGN_VIA_LABELS.direct}</SelectItem>
+                          <SelectItem value="moved">{ASSIGN_VIA_LABELS.moved}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Initial response */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Initial response</p>
+                      <SearchableMultiSelect
+                        values={toArr(initialResponse)}
+                        onChange={(a) => applyFilter(setInitialResponse, fromArr(a))}
+                        options={[...INITIAL_RESPONSE_CONFIG.map((o) => ({ value: o.value, label: o.label })), NOT_SET]}
+                        placeholder="Any response"
+                        searchPlaceholder="Search responses…"
+                        noun="responses"
+                        className="h-9"
+                      />
+                    </div>
+
+                    {/* Concern */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Concern</p>
+                      <SearchableMultiSelect
+                        values={toArr(primaryConcern)}
+                        onChange={(a) => applyFilter(setPrimaryConcern, fromArr(a))}
+                        options={[...PRIMARY_CONCERN_CONFIG.map((o) => ({ value: o.value, label: o.label })), NOT_SET]}
+                        placeholder="Any concern"
+                        searchPlaceholder="Search concerns…"
+                        noun="concerns"
+                        className="h-9"
+                      />
+                    </div>
+
+                    {/* Strategy */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Strategy</p>
+                      <SearchableMultiSelect
+                        values={toArr(strategyType)}
+                        onChange={(a) => applyFilter(setStrategyType, fromArr(a))}
+                        options={[...FOLLOWUP_STRATEGY_CONFIG.map((o) => ({ value: o.value, label: o.label })), NOT_SET]}
+                        placeholder="Any strategy"
+                        searchPlaceholder="Search strategies…"
+                        noun="strategies"
+                        className="h-9"
+                      />
+                    </div>
+
+                    {/* Exact concern — pick from what was written, and/or "contains"; either matches */}
+                    <div className="space-y-1 sm:col-span-2">
+                      <p className="text-xs font-medium text-muted-foreground">Exact concern</p>
+                      <div className="flex flex-col gap-1.5 sm:flex-row">
+                        <SearchableMultiSelect
+                          values={exactConcerns}
+                          onChange={(a) => { setExactConcerns(a); setPage(1); }}
+                          options={exactConcernOptions}
+                          placeholder="Any exact concern"
+                          searchPlaceholder="Search exact concerns…"
+                          emptyText="No exact concerns written yet"
+                          noun="concerns"
+                          className="h-9 sm:flex-1 min-w-0"
+                        />
+                        <div className="relative sm:flex-1 min-w-0">
+                          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={concernText}
+                            onChange={(e) => handleConcernTextChange(e.target.value)}
+                            placeholder="Exact concern contains…"
+                            className="h-9 pl-8 pr-8 text-sm"
+                          />
+                          {concernText && (
+                            <button
+                              type="button"
+                              onClick={clearConcernText}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                              aria-label="Clear exact concern text"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {exactConcerns.length > 0 && debouncedConcernText && (
+                        <p className="text-[10px] text-muted-foreground/70">Shows leads matching a picked concern or the text.</p>
+                      )}
+                    </div>
+
                     <div className="md:block hidden"></div>
                     <div className="space-y-2 ">
                       <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
@@ -1335,6 +1504,27 @@ function LeadsPageContent() {
                 {demoAttended !== "all" && (
                   <FilterPill label={`Demo Attended: ${demoAttended === "true" ? "Yes" : "No"}`} onRemove={() => applyFilter(setDemoAttended, "all")} />
                 )}
+                {assignVia !== "all" && (
+                  <FilterPill label={`Assigned how: ${ASSIGN_VIA_LABELS[assignVia] ?? assignVia}`} onRemove={() => applyFilter(setAssignVia, "all")} />
+                )}
+                {initialResponse !== "all" && (
+                  <FilterPill label={`Response: ${toArr(initialResponse).map((v) => optionLabel(INITIAL_RESPONSE_CONFIG, v)).join(", ")}`} onRemove={() => applyFilter(setInitialResponse, "all")} />
+                )}
+                {primaryConcern !== "all" && (
+                  <FilterPill label={`Concern: ${toArr(primaryConcern).map((v) => optionLabel(PRIMARY_CONCERN_CONFIG, v)).join(", ")}`} onRemove={() => applyFilter(setPrimaryConcern, "all")} />
+                )}
+                {strategyType !== "all" && (
+                  <FilterPill label={`Strategy: ${toArr(strategyType).map((v) => optionLabel(FOLLOWUP_STRATEGY_CONFIG, v)).join(", ")}`} onRemove={() => applyFilter(setStrategyType, "all")} />
+                )}
+                {exactConcerns.length > 0 && (
+                  <FilterPill
+                    label={`Exact concern: ${exactConcerns.length <= 2 ? exactConcerns.map((v) => `"${clip(v, 30)}"`).join(", ") : `${exactConcerns.length} picked`}`}
+                    onRemove={() => { setExactConcerns([]); setPage(1); }}
+                  />
+                )}
+                {debouncedConcernText && (
+                  <FilterPill label={`Exact concern contains: "${clip(debouncedConcernText, 30)}"`} onRemove={clearConcernText} />
+                )}
               </motion.div>
             )}
           </CardHeader>
@@ -1354,6 +1544,7 @@ function LeadsPageContent() {
                   ...(lostReason !== "all" ? { lostReason } : {}),
                   ...(dateFrom ? { dateFrom } : {}),
                   ...(dateTo ? { dateTo } : {}),
+                  ...assignFilters,
                 }}
                 canEdit={canEdit}
               />

@@ -61,7 +61,8 @@ export const useUpdateReminder = (leadId: string) => {
       data,
     }: {
       reminderId: string;
-      data: { title?: string; note?: string; remindAt?: string; isDone?: boolean };
+      /** Marking it done needs doneNote (what happened, 2+ characters); reopening doesn't. */
+      data: { title?: string; note?: string; remindAt?: string; isDone?: boolean; doneNote?: string };
     }) => {
       const res = await api.put(`/leads/${leadId}/reminders/${reminderId}`, data);
       return res.data.data;

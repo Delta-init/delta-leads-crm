@@ -1328,6 +1328,7 @@ export default function LeadDetailPage() {
           />
           <ReminderPanel
             leadId={lead._id}
+            leadName={lead.name}
             reminders={lead.reminders ?? []}
             canEdit={canEdit}
           />
