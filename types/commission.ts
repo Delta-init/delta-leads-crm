@@ -107,6 +107,22 @@ export interface PayRow {
   percent: number;
   commission: { earned: number; payable: number; notCountedYet: number };
   total: number;
+  /** Where finance stands on the month's commission (2026-10-21); null when neither approved nor paid. */
+  payout?: CommissionPayout | null;
+}
+
+/** A person's month of commission in finance: a manager approved it, then accounts paid it. */
+export interface CommissionPayout {
+  userId: string;
+  state: "approved" | "paid";
+  /** The commission payable, as approved. */
+  amount: number;
+  currency: string;
+  approvedByName: string;
+  approvedAt: string;
+  paidOn?: string | null;
+  paymentMethod?: string | null;
+  reference?: string | null;
 }
 
 export interface PayView {
@@ -116,6 +132,8 @@ export interface PayView {
   /** The roles the viewer may see. */
   slabs: Partial<Slabs>;
   slabsFrom: string | null;
+  /** False when finance couldn't be asked — the payouts are unknown, not "none". */
+  payoutsKnown?: boolean;
   /** The viewer's own month; null when they aren't on a slab. */
   me: PayRow | null;
   /** Everyone — a Super Admin and the Sales Manager only. */
