@@ -1335,6 +1335,7 @@ export default function LeadDetailPage() {
           <FollowUpPanel
             leadId={lead._id}
             canEdit={canEdit}
+            leadInFollowUp={lead.status === "followup"}
           />
           <CallsPanel
             leadId={lead._id}
