@@ -15,9 +15,9 @@ import { cn } from "@/lib/utils";
 import { fmtAcademy, fmtUSD } from "@/lib/currency";
 import { useClientEmailCheck, useCreateStudent, useUpdateStudent } from "@/hooks/useStudents";
 import { useAcademies, useAllCourses } from "@/hooks/useCourses";
-import { useAddPayment } from "@/hooks/usePayments";
+import { useAddPayment, useLeadPaymentFinance } from "@/hooks/usePayments";
 import { CommissionPreview } from "@/components/commission/CommissionPreview";
-import { PaymentRowsEditor, missingInRows, newPaymentRow, rowAmount, rowOriginal, type PaymentRow } from "@/components/students/PaymentRowsEditor";
+import { PaymentRowsEditor, leadPaymentRows, missingInRows, newPaymentRow, rowAmount, rowOriginal, type PaymentRow } from "@/components/students/PaymentRowsEditor";
 import { AcademyBadge } from "@/components/students/AcademyBadge";
 import type { Lead } from "@/types/lead";
 import { bangalorePriceOf, type Course } from "@/types/course";
@@ -119,12 +119,18 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
    * opened: the payments this close then adds to the lead must not count
    * twice. Editing an enrolment keeps the one "collected now" figure.
    */
-  const [paymentRows, setPaymentRows] = useState<PaymentRow[]>(() =>
-    alreadyPaid > 0 ? [newPaymentRow({ collectedBefore: true, amountInput: String(alreadyPaid) })] : [newPaymentRow()],
-  );
+  // Each payment on the lead that has its method and receipt is a row of its own, filled in (2026-10-23).
+  const [paymentRows, setPaymentRows] = useState<PaymentRow[]>(() => {
+    const own = alreadyPaid > 0 ? leadPaymentRows(lead.payments ?? [], academy) : [];
+    return own.length ? own : [newPaymentRow()];
+  });
   const [paidNowInput, setPaidNowInput] = useState("");
+  // An enrolment already in finance takes no "collected now" here (2026-10-23): it would stay on the lead and never
+  // reach the invoice. It is sent from the lead's Payments panel, with its receipt.
+  const { data: financeLink } = useLeadPaymentFinance(lead._id, open && editing);
+  const inFinance = editing && Boolean(financeLink?.inFinance);
   const paidNow = editing
-    ? Math.max(0, Number(paidNowInput) || 0)
+    ? inFinance ? 0 : Math.max(0, Number(paidNowInput) || 0)
     : paymentRows.filter((r) => !r.collectedBefore).reduce((s, r) => s + rowAmount(r, academy), 0);
   const paidAmount = editing ? editingBase + paidNow : paymentRows.reduce((s, r) => s + rowAmount(r, academy), 0);
   const pending = Math.max(0, totalFee - paidAmount);
@@ -249,13 +255,15 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
     if (editing || next === academy) return;
     setAcademy(next);
     setFeeInput(String(next === "bangalore" ? bangalorePriceOf(fullCourse) || "" : fullCourse?.amount || ""));
-    setPaymentRows((prev) =>
-      prev.map((r) =>
-        r.collectedBefore
-          ? { ...r, rateInput: "" }
-          : { ...r, amountInput: "", aedInput: "", inrInput: "", rateInput: "", paidInAed: false, paidInInr: false },
-      ),
-    );
+    // The lead's own money is laid out again for the other academy: one row each in Dubai, one with its rate in
+    // Bangalore (2026-10-23).
+    setPaymentRows((prev) => {
+      const taken = prev
+        .filter((r) => !r.collectedBefore)
+        .map((r) => ({ ...r, amountInput: "", aedInput: "", inrInput: "", rateInput: "", paidInAed: false, paidInInr: false }));
+      const own = alreadyPaid > 0 ? leadPaymentRows(lead.payments ?? [], next) : [];
+      return [...own, ...taken].length ? [...own, ...taken] : [newPaymentRow()];
+    });
   }
 
   function toIST(iso?: string | null) {
@@ -298,6 +306,9 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
           note: `Collected at enrolment${pickedCourse ? ` — ${pickedCourse.name}` : ""} · ${PAYMENT_METHOD_LABELS[row.method as EnrolmentPaymentMethod] ?? row.method}${
             row.paidInInr ? ` · paid ₹${Number(row.inrInput || 0).toLocaleString("en-US")} at 1 AED = ₹${row.rateInput}` : ""}`,
           paidAt: new Date(enrollmentDate).toISOString(),
+          // Kept on the lead with it, as every lead payment is now (2026-10-23).
+          ...(row.method ? { method: row.method } : {}),
+          ...(row.receipt ? { receipt: row.receipt } : {}),
         });
         setPaymentRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, addedToLead: true } : r)));
       }
@@ -587,7 +598,12 @@ export function CreateStudentModal({ open, lead, existingStudent, progress, onCl
                       />
                     </div>
                     {/* A new close takes its payments one by one, below. */}
-                    {editing && (
+                    {editing && inFinance && (
+                      <p className="self-end text-[11px] text-muted-foreground">
+                        In finance{editingBase > 0 ? ` · ${money(editingBase)} paid` : ""} — a further payment is added in the lead&apos;s Payments panel, with its receipt, and goes to finance.
+                      </p>
+                    )}
+                    {editing && !inFinance && (
                       <div className="space-y-1">
                         <p className="text-[11px] text-muted-foreground">
                           Collected now{editingBase > 0 ? ` · ${money(editingBase)} already` : ""}
