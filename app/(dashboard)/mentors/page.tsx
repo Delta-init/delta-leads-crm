@@ -66,6 +66,15 @@ interface MentorMeeting {
   bookedByEmail: string;
 }
 
+/** When the mentor marked themselves not available (2026-10-23): nothing is booked with them inside it — the LMS
+    refuses it, from here or anywhere. Marked in the LMS or the commission portal; the reason isn't shared here. */
+interface MentorTimeOff {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  allDay: boolean;
+}
+
 interface Mentor {
   id: string;
   name: string;
@@ -76,6 +85,8 @@ interface Mentor {
   slots: { dayOfWeek: number; startTime: string; endTime: string }[];
   classes: MentorClass[];
   meetings: MentorMeeting[];
+  /** Absent from an older API. */
+  timeOff?: MentorTimeOff[];
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -177,6 +188,27 @@ export default function MentorsPage() {
 
   const sameDay = (iso: string, day: Date) =>
     new Date(iso).toLocaleDateString("en-CA", { timeZone: tz }) === columnKey(day);
+
+  /*
+   * The part of a time off that falls on a column's day, in minutes from the academy's midnight — or null.
+   *
+   * Time off can run for hours or days, so unlike a class it is not "on" one day: it is clipped to each day it
+   * touches. The column's midnight is the academy's (the column is a date, read as above), found by asking what that
+   * wall time is worth in UTC — the same way the booking form turns its time into an instant.
+   */
+  const offOnDay = (t: MentorTimeOff, day: Date) => {
+    const guess = new Date(`${columnKey(day)}T00:00:00Z`);
+    // That instant on the academy's clock, read as if it were UTC — the difference is the zone's offset, whatever the
+    // browser's own zone (parsing a toLocaleString back would add the browser's offset on top).
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(guess);
+    const get = (k: string) => Number(parts.find((p) => p.type === k)?.value ?? 0);
+    const dayFrom = guess.getTime() - (Date.UTC(get("year"), get("month") - 1, get("day"), get("hour") % 24, get("minute")) - guess.getTime());
+    const a = Math.max(new Date(t.startsAt).getTime(), dayFrom);
+    const b = Math.min(new Date(t.endsAt).getTime(), dayFrom + 864e5);
+    if (b <= a) return null;
+    return { from: Math.round((a - dayFrom) / 60_000), to: Math.round((b - dayFrom) / 60_000) };
+  };
+  const hhmm = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 
   /*
    * Finding one person in a long list.
@@ -380,6 +412,11 @@ export default function MentorsPage() {
           const from = minutesInZone(v.startsAt);
           return { from, to: from + (v.durationMins || 0), what: v.attendeeNames.join(", ") || v.title };
         }),
+      /* Their time off: taken like anything booked — the LMS would refuse it anyway. */
+      ...(mentor.timeOff ?? [])
+        .map((t) => offOnDay(t, day))
+        .filter((x): x is { from: number; to: number } => x !== null)
+        .map((x) => ({ ...x, what: "not available" })),
     ];
 
     const free = mentor.slots.filter((sl) => sl.dayOfWeek === day.getDay());
@@ -496,11 +533,23 @@ export default function MentorsPage() {
     const slots = m.slots.filter((s) => s.dayOfWeek === day.getDay());
     const booked = m.classes.filter((c) => sameDay(c.startsAt, day) && classShown(c));
     const meetings = m.meetings.filter((v) => sameDay(v.startsAt, day) && meetingShown(v));
-    const empty = slots.length === 0 && booked.length === 0 && meetings.length === 0;
+    const offs = (m.timeOff ?? []).map((t) => ({ t, span: offOnDay(t, day) })).filter((x) => x.span);
+    const empty = slots.length === 0 && booked.length === 0 && meetings.length === 0 && offs.length === 0;
 
     if (empty) return null;
     return (
       <div className="space-y-1">
+        {/* Time off, first: whatever else the day holds, these hours can't be booked (2026-10-23). */}
+        {offs.map(({ t, span }) => (
+          <div
+            key={t.id}
+            title="Not available — the mentor can't be booked in this time"
+            className="rounded border border-amber-500/30 bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-500"
+          >
+            <span className="tabular-nums">{span!.from === 0 && span!.to === 1440 ? "All day" : `${hhmm(span!.from)}–${hhmm(span!.to)}`}</span> · Not available
+          </div>
+        ))}
+
         {/* The pattern, behind everything else. */}
         {slots.map((s, i) => (
           <div
@@ -575,7 +624,7 @@ export default function MentorsPage() {
         <div className="min-w-0 flex-1">
           <h2 className="text-2xl font-bold text-foreground">Mentors</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            When they are free, and what is already booked.{" "}
+            When they are free, what is already booked, and when they're not available.{" "}
             <span className="whitespace-nowrap">All times {tz.replace("_", " ")}.</span>
           </p>
         </div>
@@ -876,6 +925,12 @@ export default function MentorsPage() {
                     </option>
                   ))}
                 </select>
+                {/* Every slot of the day taken, time off among them: said, and Book stays off. */}
+                {!editingId && slotList.length > 0 && slotList.every((sl) => sl.taken) && (
+                  <p className="text-xs text-amber-500">
+                    {booking?.mentor.name} can't be booked this day{slotList.some((sl) => sl.taken === "not available") ? " — not available" : ""}. Pick another day.
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="mdur">Minutes</Label>
@@ -963,6 +1018,7 @@ export default function MentorsPage() {
             <Button
               disabled={
                 book.isPending ||
+                (!editingId && Boolean(slotList.find((sl) => sl.value === form.time)?.taken)) ||
                 form.title.trim().length < 3 ||
                 !guests.some((g) => g.name.trim())
               }
