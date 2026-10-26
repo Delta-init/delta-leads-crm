@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { toast } from "@/lib/toast";
 import { EMAIL_CHECK_KEY } from "@/hooks/useStudents";
-import type { PaymentOriginal, StoredReceipt, Student } from "@/types/student";
+import type { Academy, PaymentOriginal, StoredReceipt, Student } from "@/types/student";
 import { isTakenEmailMessage } from "@/types/student";
 
 const KEY = ["enrolments"] as const;
@@ -206,6 +206,9 @@ export interface EnrolmentCorrectionStart {
   suggestedEmail?: string;
   mayMove: boolean;
   ownOnLead: number;
+  /** Its academy now, and the ones it may be corrected for (2026-10-26) — absent from a server before the choice. */
+  academy?: Academy;
+  academies?: Academy[];
   counsellors?: { _id: string; name: string }[];
   teams?: { _id: string; name: string }[];
   student: Student;
@@ -228,6 +231,8 @@ export interface EnrolmentCorrectionInput {
   payments: { method: string; amount: number; receipt: StoredReceipt | null; paidAt: string; collectedBefore?: boolean; original?: PaymentOriginal }[];
   hasBonus: boolean;
   bonusAmount: number;
+  /** Another academy: it moves to that academy's finance books when sent (2026-10-26). */
+  academy?: Academy;
 }
 
 /**

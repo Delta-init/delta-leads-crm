@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertTriangle, BookOpen, Calendar, DollarSign, Gift, Loader2, Mail, Phone,
+  AlertTriangle, BookOpen, Calendar, DollarSign, Gift, Loader2, Mail, MapPin, Phone,
   Send, StickyNote, Undo2, User2, Users, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,8 @@ import { useClientEmailCheck } from "@/hooks/useStudents";
 import { PaymentRowsEditor, inrRowFields, missingInRows, newPaymentRow, rowAmount, rowOriginal, type PaymentRow } from "@/components/students/PaymentRowsEditor";
 import { AcademyBadge } from "@/components/students/AcademyBadge";
 import { bangalorePriceOf, type Course } from "@/types/course";
-import type { FeeStatus, Student, StudentPayment } from "@/types/student";
-import { ENROLMENT_LANGUAGES, academyOf, isFinanceEmail, isTakenEmailMessage } from "@/types/student";
+import type { Academy, FeeStatus, Student, StudentPayment } from "@/types/student";
+import { ACADEMIES, ACADEMY_LABELS, ENROLMENT_LANGUAGES, academyOf, isFinanceEmail, isTakenEmailMessage } from "@/types/student";
 
 /*
  * Correcting an enrolment finance sent back (the user, 2026-10-05: "if send it
@@ -122,8 +122,13 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
   const { data: courses = [], isLoading: coursesLoading } = useAllCourses();
   const correct = useCorrectEnrolment();
 
-  // The academy of the close — shown, never changed: its org holds the invoice.
-  const academy = academyOf(s.academy);
+  /*
+   * The academy (2026-10-26: "when it is sent back we can change the location"): its own, or — where the server
+   * offers both — the other, which moves the enrolment to that academy's finance books when it is sent.
+   */
+  const was = academyOf(start.academy ?? s.academy);
+  const [academy, setAcademy] = useState<Academy>(was);
+  const offered = (start.academies ?? [was]).filter((a): a is Academy => (ACADEMIES as readonly string[]).includes(a));
   const bangalore = academy === "bangalore";
   const money = (n: number) => fmtAcademy(n, academy);
 
@@ -176,6 +181,24 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
 
   // A Bangalore enrolment's course needs its Bangalore price, as at the close.
   const pickedCourse = courseOptions.find((c) => c._id === courseId);
+
+  /**
+   * The other academy: the fee follows — the course's Bangalore price, or its Dubai one — and amounts typed in one
+   * currency are cleared rather than read as the other's; the lead's own money is one row again, to be given its
+   * rate in Bangalore. Methods and receipts stay.
+   */
+  function chooseAcademy(next: Academy) {
+    if (next === academy) return;
+    setAcademy(next);
+    setFeeInput(String(next === "bangalore" ? bangalorePriceOf(pickedCourse) || "" : pickedCourse?.amount || ""));
+    setPaymentRows((prev) => {
+      const taken = prev
+        .filter((r) => !r.collectedBefore)
+        .map((r) => ({ ...r, amountInput: "", aedInput: "", inrInput: "", rateInput: "", paidInAed: false, paidInInr: false }));
+      const own = start.ownOnLead > 0 ? [newPaymentRow({ collectedBefore: true, amountInput: String(start.ownOnLead) })] : [];
+      return [...own, ...taken].length ? [...own, ...taken] : [newPaymentRow()];
+    });
+  }
   const bangalorePriceMissing = bangalore && Boolean(pickedCourse) && !(bangalorePriceOf(pickedCourse) > 0);
 
   /*
@@ -239,6 +262,7 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
           }),
           hasBonus: bonusChoice === "yes",
           bonusAmount: bonusChoice === "yes" ? bonusAmount : 0,
+          ...(academy !== was ? { academy } : {}),
         },
       },
       { onSuccess: onClose },
@@ -261,7 +285,6 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
             </DialogHeader>
             <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               <span className="truncate">{[s.name, s.enrollmentNumber, start.invoiceNumber].filter(Boolean).join(" · ")}</span>
-              {/* Read only: a correction keeps the academy of the close. */}
               <AcademyBadge academy={academy} className="shrink-0" />
             </p>
           </div>
@@ -313,6 +336,39 @@ function CorrectionForm({ studentId, start, onClose }: { studentId: string; star
             <p className="text-[10px] text-muted-foreground">Checking that no other client has this email…</p>
           )}
         </section>
+
+        {/* Which academy: changeable while sent back, where the server offers both (2026-10-26). */}
+        {offered.length > 1 && (
+          <section className="space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <MapPin className="h-3 w-3" /> Academy
+            </p>
+            <div className="flex items-center gap-2" role="radiogroup" aria-label="Academy">
+              {offered.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  role="radio"
+                  aria-checked={academy === a}
+                  onClick={() => chooseAcademy(a)}
+                  className={cn(
+                    "h-8 rounded-md border px-3 text-xs font-medium transition-colors",
+                    academy === a
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                  )}
+                >
+                  {ACADEMY_LABELS[a]}{a === "bangalore" ? " · ₹" : ""}
+                </button>
+              ))}
+            </div>
+            {academy !== was && (
+              <p className="text-[11px] text-amber-400">
+                Moves to the {ACADEMY_LABELS[academy]} academy&apos;s books when sent — finance makes it there{start.invoiceNumber ? ` and voids ${start.invoiceNumber}` : ""}. Check the fee and payments: they are in {academy === "bangalore" ? "rupees" : "dirhams"} now.
+              </p>
+            )}
+          </section>
+        )}
 
         {/* The course and the money */}
         <section className="space-y-2">
