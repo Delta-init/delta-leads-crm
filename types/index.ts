@@ -45,6 +45,8 @@ export const CRM_MODULES = [
   "inactive-leads",
   /* Activity (2026-10-15): who is here, sign-ins, idle alerts, the HRMS shift and clock-ins. The Super Admin's until given. */
   "activity",
+  /* WhatsApp (2026-10-27): each person links their own WhatsApp and chats with their leads. Open by default. */
+  "whatsapp",
 ] as const;
 
 export type CrmModule = (typeof CRM_MODULES)[number];
@@ -69,6 +71,7 @@ export const MODULE_LABELS: Record<CrmModule, string> = {
   pay: "My Pay",
   calls: "Calls (3CX)",
   balancePayments: "Balance payments",
+  whatsapp: "WhatsApp",
   "inactive-leads": "Inactive Leads",
   activity: "Activity",
 };
@@ -92,6 +95,7 @@ export const OPEN_BY_DEFAULT: Partial<Record<CrmModule, Partial<ModulePermission
   pay: { view: true },
   calls: { view: true, export: true },
   balancePayments: { view: true, create: true },
+  whatsapp: { view: true, create: true },
 };
 
 /** A role's permissions on one module — what it was given, or the module's default. */
