@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import api from "@/lib/axios";
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Call, then log it — as in Tetra Commission's CallFlow (2026-10-12).
+   Call, then log it — as in CS Portal's CallFlow (2026-10-12).
 
    A Call button asks how to call, every time:
      - 3CX call (when the caller's 3CX extension is known and 3CX is connected):

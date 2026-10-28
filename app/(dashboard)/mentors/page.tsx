@@ -68,7 +68,7 @@ interface MentorMeeting {
 }
 
 /** When the mentor marked themselves not available (2026-10-23): nothing is booked with them inside it — the LMS
-    refuses it, from here or anywhere. Marked in the LMS or the commission portal; the reason isn't shared here. */
+    refuses it, from here or anywhere. Marked in the LMS or the CS Portal; the reason isn't shared here. */
 interface MentorTimeOff {
   id: string;
   startsAt: string;

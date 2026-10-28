@@ -8,7 +8,7 @@ import { getRecordingLink, type ThreecxCall, type ThreecxNote } from "@/hooks/us
 
 /* ────────────────────────────────────────────────────────────────────────────
    3CX calls with leads: how a call's result, length, person and recording
-   show on the Calls page and a lead's Calls section (as in Tetra Commission).
+   show on the Calls page and a lead's Calls section (as in CS Portal).
 ──────────────────────────────────────────────────────────────────────────── */
 
 const pad = (n: number) => String(n).padStart(2, "0");

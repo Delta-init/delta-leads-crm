@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useCallFlow, dialNumbers } from "@/components/calls/CallFlow";
 
 /*
- * The Call button (2026-10-12, as in Tetra Commission): it asks "3CX call" or
+ * The Call button (2026-10-12, as in CS Portal): it asks "3CX call" or
  * "Phone call" every time (components/calls/CallFlow.tsx), follows a 3CX call
  * in a call window, then asks how the call went. The lead's call counts come
  * from 3CX with the call sync — nothing is counted here any more.
