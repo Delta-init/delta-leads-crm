@@ -747,11 +747,15 @@ function LeadsPageContent() {
   // "Admin-level" = can see people-based filters
   const isAdmin = isSuperAdmin || isTeamLeader;
 
-  // For Assigned To filter: super admin sees all users; team leader sees their team members; else empty
+  // For Assigned To filter: super admin sees all users; a team leader sees their team — its leaders
+  // (themselves included: leaders aren't in `members`) and members, once each, by name; else empty
   const filterableUsers = isSuperAdmin
     ? allUsers
     : isTeamLeader && myLeaderTeam
-      ? (myLeaderTeam.members ?? []).filter((m): m is typeof allUsers[0] => typeof m === "object")
+      ? [...(myLeaderTeam.leaders ?? []), ...(myLeaderTeam.members ?? [])]
+          .filter((m): m is typeof allUsers[0] => typeof m === "object" && !!m)
+          .filter((m, i, list) => list.findIndex((x) => x._id === m._id) === i)
+          .sort((a, b) => a.name.localeCompare(b.name))
       : [];
 
   // Reporter filter only makes sense for super admin
@@ -841,7 +845,8 @@ function LeadsPageContent() {
 
   // ── Active filter label helpers ───────────────────────────────────────────────
   function userName(id: string) {
-    return allUsers.find((u) => u._id === id)?.name ?? id;
+    // A team leader can't list every user — their team (filterableUsers) has the names
+    return (allUsers.find((u) => u._id === id) ?? filterableUsers.find((u) => u._id === id))?.name ?? id;
   }
 
   return (
