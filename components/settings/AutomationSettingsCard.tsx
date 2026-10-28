@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { Zap, Timer, Clock, Loader2, Save, Info, ArrowRight, Coffee, Target } from "lucide-react";
+import { Zap, Timer, Clock, Loader2, Save, Info, ArrowRight, Coffee, Target, IndianRupee } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import type { AppSettings } from "@/types/settings";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 /** What the page edits — enabledAt is the server's to set. */
-type Draft = Pick<AppSettings, "idleAlerts" | "workingHours" | "dailyTarget"> & {
+type Draft = Pick<AppSettings, "idleAlerts" | "workingHours" | "dailyTarget" | "bangaloreRevenue"> & {
   inactiveLeads: Omit<AppSettings["inactiveLeads"], "enabledAt">;
 };
 
@@ -76,6 +76,8 @@ const draftOf = (s: AppSettings): Draft => ({
     notifyTeamLeaders: s.dailyTarget?.notifyTeamLeaders ?? true,
     notifySalesManager: s.dailyTarget?.notifySalesManager ?? true,
   },
+  // Only from a server that has it — an older one would refuse the field.
+  ...(s.bangaloreRevenue ? { bangaloreRevenue: { ...s.bangaloreRevenue } } : {}),
   workingHours: { ...s.workingHours, days: [...s.workingHours.days] },
 });
 
@@ -120,6 +122,8 @@ export function AutomationSettingsCard() {
     if (mh && (!HHMM.test(mh.start) || !HHMM.test(mh.end))) p.push("Set both moving-hour times.");
     else if (mh && minutesOf(mh.end) <= minutesOf(mh.start)) p.push("Moving hours must end after they start.");
     if (!(draft.dailyTarget.teamTarget >= 0) || !(draft.dailyTarget.departmentTarget >= 0)) p.push("Targets can't be negative.");
+    const rate = draft.bangaloreRevenue?.inrPerAed;
+    if (rate !== undefined && !(rate >= 1 && rate <= 1000)) p.push("The Bangalore rate must be between ₹1 and ₹1,000 for 1 AED.");
     if (draft.idleAlerts.limitMinutes < 5) p.push("The idle limit must be at least 5 minutes.");
     if (draft.idleAlerts.limitMinutes > 24 * 60) p.push("The idle limit can be at most 24 hours.");
     if (!draft.workingHours.days.length) p.push("Pick at least one working day.");
@@ -373,6 +377,31 @@ export function AutomationSettingsCard() {
             Warn the Sales Manager (and Commission &ldquo;sees everything&rdquo; people) about the department
           </label>
         </Section>
+
+        {/* ── Bangalore money in revenue ── */}
+        {draft.bangaloreRevenue && (
+          <Section
+            icon={IndianRupee}
+            title="Bangalore enrolments in revenue"
+            description="A close for the Bangalore academy is paid in rupees. The leaderboard, the Sales TV, the reports, team pages and the daily target count it in AED at this rate (AED cash taken at the close counts as its AED). Changing it re-counts every month; nothing stored changes, and finance is not affected."
+          >
+            <label className="space-y-1">
+              <span className="text-sm text-muted-foreground">1 AED = ₹</span>
+              <Input
+                id="bangalore-rate"
+                type="number"
+                min={1}
+                max={1000}
+                step={0.01}
+                inputMode="decimal"
+                value={draft.bangaloreRevenue.inrPerAed}
+                onChange={(e) => set("bangaloreRevenue", { inrPerAed: e.target.value === "" ? 0 : Number(e.target.value) })}
+                disabled={!canEdit}
+                className="h-9 max-w-[12rem] tabular-nums"
+              />
+            </label>
+          </Section>
+        )}
 
         {/* ── Working hours ── */}
         <Section icon={Clock} title="Working hours" description={draft.inactiveLeads.hours

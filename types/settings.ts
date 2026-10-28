@@ -23,6 +23,11 @@ export interface AppSettings {
     notifyTeamLeaders: boolean;
     notifySalesManager: boolean;
   };
+  /**
+   * The rate a Bangalore enrolment's rupees count in the leaderboard, Sales TV and reports at: 1 AED = this many
+   * rupees. Absent from a server older than 2026-10-28.
+   */
+  bangaloreRevenue?: { inrPerAed: number };
   workingHours: { timezone: string; days: number[]; start: string; end: string };
   updatedBy: string | null;
   updatedAt: string | null;
@@ -38,4 +43,5 @@ export type AppSettingsUpdate = Partial<{
   idleAlerts: Partial<AppSettings["idleAlerts"]>;
   workingHours: Partial<AppSettings["workingHours"]>;
   dailyTarget: Partial<AppSettings["dailyTarget"]>;
+  bangaloreRevenue: Partial<NonNullable<AppSettings["bangaloreRevenue"]>>;
 }>;
