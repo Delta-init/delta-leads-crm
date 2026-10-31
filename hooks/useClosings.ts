@@ -35,6 +35,10 @@ export interface ClosingDay {
 }
 
 export interface ClosingsResponse {
+  /** What the viewer may see (2026-10-31): everyone's, their teams', or their own. */
+  view?: "all" | "team" | "own";
+  /** A team leader's teams, for the team filter. */
+  teams?: { id: string; name: string }[];
   days: ClosingDay[];
   totals: {
     days: number;
