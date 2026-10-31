@@ -19,6 +19,8 @@ export interface Closing {
   pendingAmount: number;
   feeStatus: string;
   status: string;
+  /** Paid on it, but outside the period shown — never counted in it (2026-10-31). `paidAmount` is inside only. */
+  paidOutside?: number;
   /** What the viewer may see of its commission: earned on what is collected, and the balance still to earn. */
   commission?: { earned: number; balance: number; state: string } | null;
 }

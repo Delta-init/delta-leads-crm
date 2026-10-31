@@ -146,7 +146,7 @@ export default function ClosingsPage() {
         {/* Collected first, the balance beside it (the user, 2026-10-31). */}
         <Stat
           icon={Wallet}
-          label="Collected"
+          label="Collected in this period"
           value={fmtFull(totals?.paidAmount ?? 0)}
           sub={`of ${fmtFull(totals?.totalFee ?? 0)} · ${fmtFull(totals?.pendingAmount ?? 0)} balance`}
           tone="amber"
@@ -359,6 +359,11 @@ function DayRow({
                 <p className={cn("text-[11px]", e.pendingAmount > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
                   {e.pendingAmount > 0 ? `${fmtFull(e.pendingAmount)} balance` : "Paid in full"}
                 </p>
+                {(e.paidOutside ?? 0) > 0 && (
+                  <p className="text-[11px] text-muted-foreground" title="Received outside this period — not counted in it, nor in its commission">
+                    {fmtFull(e.paidOutside ?? 0)} paid outside this period
+                  </p>
+                )}
               </div>
             </div>
           ))}

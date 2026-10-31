@@ -168,6 +168,8 @@ export interface CommissionSale {
   fee?: number | null;
   /** How much of the fee is collected, 0–1. */
   paidShare?: number;
+  /** The share of the fee received in this month — what the lines earn in it. */
+  monthShare?: number;
   /** Only the lines the viewer may see. */
   lines: CommissionLine[];
 }

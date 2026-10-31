@@ -45,7 +45,7 @@ export function EarningsTab() {
         </Select>
         {data && (
           <p className="text-xs text-muted-foreground">
-            {SCOPE_NOTE[data.scope]} · sales count in the month they were closed, once finance approves · earned on what is collected, the rest as balance
+            {SCOPE_NOTE[data.scope]} · counted once finance approves · earned in the month the money is received, the rest as balance
           </p>
         )}
       </div>
@@ -188,7 +188,9 @@ function SaleRow({ sale: s, index }: { sale: CommissionSale; index: number }) {
             {s.courseName || "No course"} · closed by {s.closerName || "nobody"}
             {s.teamName ? ` · ${s.teamName}` : ""} · {uaeDate(s.saleDate)}
             {s.invoiceNumber ? ` · ${s.invoiceNumber}` : ""}
-            {typeof s.paidShare === "number" && s.paidShare < 1 ? ` · ${Math.round(s.paidShare * 100)}% collected` : ""}
+            {typeof s.monthShare === "number" && s.monthShare < 1
+              ? ` · ${Math.round(s.monthShare * 100)}% of the fee received this month`
+              : ""}
           </p>
           {s.state !== "counted" && s.reason && (
             <p className={cn(
