@@ -192,6 +192,11 @@ function SaleRow({ sale: s, index }: { sale: CommissionSale; index: number }) {
               ? ` · ${Math.round(s.monthShare * 100)}% of the fee received this month`
               : ""}
           </p>
+          {s.state === "counted" && s.lines.length > 0 && s.lines.every((l) => l.amount === 0) && (
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              No commission is set for {s.courseName ? `“${s.courseName}”` : "this course"} on the plan — it earns nothing.
+            </p>
+          )}
           {s.state !== "counted" && s.reason && (
             <p className={cn(
               "mt-1.5 text-[11px]",
@@ -216,6 +221,9 @@ function SaleRow({ sale: s, index }: { sale: CommissionSale; index: number }) {
               >
                 <span className="font-semibold text-primary">{ROLE_SHORT[l.role]}</span>
                 {l.userName} · <span className="tabular-nums">{aed(l.earned ?? l.amount)}</span>
+                {l.earned !== undefined && l.amount > 0 && l.earned !== l.amount && (
+                  <span className="tabular-nums text-muted-foreground">of {aed(l.amount)}</span>
+                )}
                 {(l.balance ?? 0) > 0 && (
                   <span className="tabular-nums text-amber-600 dark:text-amber-400">+{aed(l.balance ?? 0)} balance</span>
                 )}
