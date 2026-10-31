@@ -19,6 +19,8 @@ export interface Closing {
   pendingAmount: number;
   feeStatus: string;
   status: string;
+  /** What the viewer may see of its commission: earned on what is collected, and the balance still to earn. */
+  commission?: { earned: number; balance: number; state: string } | null;
 }
 
 export interface ClosingDay {
@@ -38,6 +40,8 @@ export interface ClosingsResponse {
     totalFee: number;
     paidAmount: number;
     pendingAmount: number;
+    commissionEarned?: number;
+    commissionBalance?: number;
   };
   /** Always present, so a quiet morning reads "0" rather than showing nothing. */
   today: { date: string; count: number; totalFee: number };

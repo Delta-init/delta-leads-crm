@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  CalendarCheck, ChevronDown, Loader2, RefreshCw, Trophy, Users, Wallet,
+  BadgeDollarSign, CalendarCheck, ChevronDown, Loader2, RefreshCw, Trophy, Users, Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,7 +127,7 @@ export default function ClosingsPage() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+        className="grid grid-cols-2 gap-3 lg:grid-cols-5"
       >
         <Stat
           icon={CalendarCheck}
@@ -143,12 +143,20 @@ export default function ClosingsPage() {
           sub={`${totals?.days ?? 0} day${totals?.days === 1 ? "" : "s"} with a closing`}
           tone="violet"
         />
+        {/* Collected first, the balance beside it (the user, 2026-10-31). */}
         <Stat
           icon={Wallet}
-          label="Value closed"
-          value={fmtFull(totals?.totalFee ?? 0)}
-          sub={`${fmtFull(totals?.paidAmount ?? 0)} collected`}
+          label="Collected"
+          value={fmtFull(totals?.paidAmount ?? 0)}
+          sub={`of ${fmtFull(totals?.totalFee ?? 0)} · ${fmtFull(totals?.pendingAmount ?? 0)} balance`}
           tone="amber"
+        />
+        <Stat
+          icon={BadgeDollarSign}
+          label="Commission earned"
+          value={fmtFull(totals?.commissionEarned ?? 0)}
+          sub={`${fmtFull(totals?.commissionBalance ?? 0)} balance, on payments still due`}
+          tone="green"
         />
         <Stat
           icon={Trophy}
@@ -308,8 +316,10 @@ function DayRow({
             <p className="text-[11px] text-muted-foreground">closing{day.count === 1 ? "" : "s"}</p>
           </div>
           <div className="w-28">
-            <p className="text-sm font-semibold tabular-nums leading-none">{fmtFull(day.totalFee)}</p>
-            <p className="text-[11px] text-muted-foreground">{fmtFull(day.paidAmount)} in</p>
+            <p className="text-sm font-semibold tabular-nums leading-none">{fmtFull(day.paidAmount)}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {day.pendingAmount > 0 ? `${fmtFull(day.pendingAmount)} balance` : `of ${fmtFull(day.totalFee)}`}
+            </p>
           </div>
         </div>
       </button>
@@ -331,10 +341,23 @@ function DayRow({
                 <p className="text-xs">{e.closedByName}</p>
                 <p className="text-[11px] text-muted-foreground">{e.teamName}</p>
               </div>
+              {e.commission?.state === "counted" && (e.commission.earned > 0 || e.commission.balance > 0) && (
+                <div className="text-right">
+                  <p className="text-xs font-medium tabular-nums text-green-600 dark:text-green-400">
+                    {fmtFull(e.commission.earned)} commission
+                  </p>
+                  <p className="text-[11px] tabular-nums text-muted-foreground">
+                    {e.commission.balance > 0 ? `${fmtFull(e.commission.balance)} on the balance` : "All earned"}
+                  </p>
+                </div>
+              )}
               <div className="ml-auto text-right">
-                <p className="text-sm font-semibold tabular-nums">{fmtFull(e.totalFee)}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {e.pendingAmount > 0 ? `${fmtFull(e.pendingAmount)} due` : "Paid in full"}
+                <p className="text-sm font-semibold tabular-nums">
+                  {fmtFull(e.paidAmount)}
+                  <span className="font-normal text-muted-foreground"> / {fmtFull(e.totalFee)}</span>
+                </p>
+                <p className={cn("text-[11px]", e.pendingAmount > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
+                  {e.pendingAmount > 0 ? `${fmtFull(e.pendingAmount)} balance` : "Paid in full"}
                 </p>
               </div>
             </div>
