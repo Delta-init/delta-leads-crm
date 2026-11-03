@@ -30,7 +30,7 @@ import {
   HandCoins,
   Hourglass,
   Activity,
-  DoorOpen, Repeat2, MessageCircle,
+  DoorOpen, Repeat2, MessageCircle, Headphones,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -63,6 +63,8 @@ export const navItems: { href: string; label: string; icon: React.ElementType; p
   { href: "/repeat-leads", label: "Repeat leads",    icon: Repeat2,         permModule: "leads"     },
   /* 3CX calls with leads (2026-10-12): its own "calls" module, open to every role until unticked. */
   { href: "/calls",     label: "Calls",              icon: PhoneCall,       permModule: "calls"     },
+  /* Calls marked for training, to listen and learn (2026-11-03); open to every role until unticked. */
+  { href: "/training-calls", label: "Training calls", icon: Headphones, permModule: "trainingCalls" },
   { href: "/whatsapp",  label: "WhatsApp",           icon: MessageCircle,   permModule: "whatsapp"  },
   { href: "/reminders", label: "Reminders",          icon: Bell,            permModule: "reminders" },
   { href: "/teams",     label: "Teams",              icon: UsersRound,      permModule: "teams"     },

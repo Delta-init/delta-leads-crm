@@ -47,6 +47,9 @@ export const CRM_MODULES = [
   "activity",
   /* WhatsApp (2026-10-27): each person links their own WhatsApp and chats with their leads. Open by default. */
   "whatsapp",
+  /* Training calls (2026-11-03): calls marked for training, to listen and learn. Open by default; marking is for the
+     Super Admin, the Sales Manager and team leaders. */
+  "trainingCalls",
 ] as const;
 
 export type CrmModule = (typeof CRM_MODULES)[number];
@@ -72,6 +75,7 @@ export const MODULE_LABELS: Record<CrmModule, string> = {
   calls: "Calls (3CX)",
   balancePayments: "Balance payments",
   whatsapp: "WhatsApp",
+  trainingCalls: "Training calls",
   "inactive-leads": "Inactive Leads",
   activity: "Activity",
 };
@@ -96,6 +100,7 @@ export const OPEN_BY_DEFAULT: Partial<Record<CrmModule, Partial<ModulePermission
   calls: { view: true, export: true },
   balancePayments: { view: true, create: true },
   whatsapp: { view: true, create: true },
+  trainingCalls: { view: true },
 };
 
 /** A role's permissions on one module — what it was given, or the module's default. */

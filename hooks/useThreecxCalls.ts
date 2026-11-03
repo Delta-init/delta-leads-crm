@@ -29,6 +29,87 @@ export interface ThreecxCall {
   leadName: string;
   recordings: number;
   reason: string;
+  /** Marked for training (2026-11-03); absent from an API before, null when not. */
+  training?: { category: TrainingCategory; note: string; byName: string; at: string } | null;
+}
+
+/* ── Training calls (2026-11-03) ─────────────────────────────────────────── */
+
+export const TRAINING_CATEGORIES = ["good_example", "closing", "objection", "follow_up", "avoid"] as const;
+export type TrainingCategory = (typeof TRAINING_CATEGORIES)[number];
+export const TRAINING_LABEL: Record<TrainingCategory, string> = {
+  good_example: "Good example",
+  closing: "Closing",
+  objection: "Objection handling",
+  follow_up: "Follow-up",
+  avoid: "What not to do",
+};
+
+/** A call on the Training calls page — without the customer's number. */
+export interface TrainingCall {
+  _id: string;
+  startedAt: string;
+  direction: "in" | "out";
+  status: CallStatus;
+  talkSeconds: number;
+  userId: string;
+  userName: string;
+  leadName: string;
+  recordings: number;
+  training: {
+    category: TrainingCategory;
+    categoryLabel: string;
+    note: string;
+    byName: string;
+    at: string;
+    /** Every recording kept in the CRM's storage — it plays even after 3CX deletes it. */
+    saved: boolean;
+    copyError: string;
+  };
+}
+
+export interface TrainingFilters { category: "all" | TrainingCategory; person: string; search: string }
+
+export const useTrainingCalls = (f: TrainingFilters, page: number, limit = 30) =>
+  useQuery({
+    queryKey: ["training-calls", f, page, limit],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<{
+        calls: TrainingCall[]; canMark: boolean;
+        categories: { key: TrainingCategory; label: string; calls: number }[];
+        people: { id: string; name: string; calls: number }[];
+      }>>("/calls/3cx/training", {
+        params: {
+          category: f.category === "all" ? undefined : f.category,
+          person: f.person === "all" ? undefined : f.person,
+          search: f.search.trim() || undefined,
+          page, limit,
+        },
+      });
+      return { ...res.data.data!, pagination: res.data.pagination as PaginationMeta | undefined };
+    },
+    placeholderData: keepPreviousData,
+  });
+
+/** A 10-minute link to a training call's recording — for anyone on the Training calls page. */
+export async function getTrainingRecordingLink(callId: string, index: number): Promise<string> {
+  const res = await api.get<ApiResponse<{ url: string; expiresIn: number }>>(`/calls/3cx/training/${callId}/recording-link`, { params: { index } });
+  return res.data.data!.url;
+}
+
+/** Mark a call for training (or change why); with `remove`, no longer a training call. */
+export function useTrainingMark() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { callId: string; category?: TrainingCategory; note?: string; remove?: boolean }) =>
+      v.remove
+        ? (await api.delete(`/calls/3cx/${v.callId}/training`)).data
+        : (await api.put(`/calls/3cx/${v.callId}/training`, { category: v.category, note: v.note ?? "" })).data,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["threecx-calls"] });
+      void qc.invalidateQueries({ queryKey: ["training-calls"] });
+    },
+  });
 }
 
 export interface CallTotals {
@@ -90,7 +171,7 @@ export const useCallStats = (f: CallFilters) =>
   useQuery({
     queryKey: ["threecx-calls", "stats", f],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<{ stats: CallTotals; people: CallPersonRow[]; threecx: ThreecxNote; canSync: boolean }>>(
+      const res = await api.get<ApiResponse<{ stats: CallTotals; people: CallPersonRow[]; threecx: ThreecxNote; canSync: boolean; canMarkTraining?: boolean }>>(
         "/calls/3cx/stats", { params: params(f) });
       return res.data.data!;
     },
