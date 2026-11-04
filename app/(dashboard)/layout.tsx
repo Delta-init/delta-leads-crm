@@ -13,6 +13,7 @@ import { RootPortalHistoryBridge } from "@/components/shared/RootPortalHistoryBr
 import { TargetWarningDialog } from "@/components/notifications/TargetWarningDialog";
 import { CallFlowProvider } from "@/components/calls/CallFlow";
 import { SaleCelebration } from "@/components/shared/SaleCelebration";
+import { RewardsPopup } from "@/components/rewards/RewardsPopup";
 import api from "@/lib/axios";
 import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import type { AuthUser } from "@/types";
@@ -87,6 +88,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <TargetWarningDialog />
       <RecentPageTracker />
       <SaleCelebration />
+      <RewardsPopup />
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
