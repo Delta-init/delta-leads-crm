@@ -26,6 +26,7 @@ import {
   CalendarDays,
   Coins,
   Wallet,
+  WalletCards,
   Trophy,
   HandCoins,
   Hourglass,
@@ -85,6 +86,8 @@ export const navItems: { href: string; label: string; icon: React.ElementType; p
   { href: "/commission",label: "Commission",         icon: Coins,           permModule: "commission" },
   { href: "/leaderboard",label: "Leaderboard",       icon: Trophy,          permModule: "leaderboard" },
   { href: "/my-pay",    label: "My Pay",             icon: Wallet,          permModule: "pay" },
+  /* My Wallet, from the HRMS (2026-11-04): salary a day at a time, deductions and why, commission, what finance paid — everyone's own. */
+  { href: "/wallet",    label: "My Wallet",          icon: WalletCards,     permModule: null },
   { href: "/mentors",   label: "Mentors",            icon: CalendarDays,    permModule: "mentors" },
   /* The office's meeting rooms, booked through the HRMS (2026-10-19) — open to everyone signed in. */
   { href: "/meeting-rooms", label: "Meeting rooms", icon: DoorOpen, permModule: null },

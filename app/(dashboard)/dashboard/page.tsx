@@ -16,6 +16,7 @@ import { fmtFull } from "@/lib/currency";
 import { DashboardLeaderboardCard } from "@/components/dashboard/DashboardLeaderboardCard";
 import { DailyFollowupsPopup } from "@/components/leads/DailyFollowupsPopup";
 import { DashboardPayCard } from "@/components/pay/DashboardPayCard";
+import { WalletCard } from "@/components/wallet/WalletCard";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -115,6 +116,9 @@ export default function DashboardPage() {
           <DailyFollowupsPopup />
         </div>
       </motion.div>
+
+      {/* First in the row: this month's pay from the HRMS — earned, deducted, paid (2026-11-04) */}
+      <WalletCard />
 
       {/* This month on the salary slab */}
       <DashboardPayCard />
