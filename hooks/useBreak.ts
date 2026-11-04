@@ -5,7 +5,7 @@ import api from "@/lib/axios";
 import type { ApiResponse } from "@/types";
 import { breakLabel, type BreakKind } from "@/lib/breaks";
 
-/** My break — "Take break": no new leads from a team that splits by HRMS attendance until it ends. */
+/** My break — "Take break": leads still come (2026-11-04); my leads don't go inactive until it ends. */
 export interface MyBreak { onBreak: boolean; since: string | null; kind?: BreakKind | null }
 const BREAK_KEY = ["break"] as const;
 
@@ -27,8 +27,8 @@ export const useSetBreak = () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
       toast.success(
         data.onBreak
-          ? `${breakLabel(data.kind)} started — no new leads until you end it`
-          : "Break ended — leads are coming to you again",
+          ? `${breakLabel(data.kind)} started — your leads won't go inactive until you end it`
+          : "Break ended — your leads' inactive clock runs again",
       );
     },
     onError: (err: unknown) => {

@@ -1,4 +1,4 @@
-/** What a break is for — picked when "Take break" is pressed (the user, 2026-10-20). Every kind stops new leads the same. */
+/** What a break is for — picked when "Take break" is pressed (the user, 2026-10-20). Every kind counts the same: leads still come, their inactive clock stops. */
 export const BREAK_KINDS = [
   { value: "meeting", label: "Meeting", emoji: "🤝" },
   { value: "lunch", label: "Lunch", emoji: "🍽️" },

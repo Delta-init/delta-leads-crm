@@ -9,11 +9,11 @@ import { BREAK_KINDS, breakLabel } from "@/lib/breaks";
 import { useMyBreak, useSetBreak } from "@/hooks/useBreak";
 
 /**
- * "Take break" in the header (the user, 2026-10-10): while on a break no new
- * leads come from a team that splits by HRMS attendance. Taking one asks what
- * it's for — meeting, lunch, tea or washroom (2026-10-20); every kind stops new
- * leads the same. Shows how long the break has run; one click ends it. A break
- * ends with the GST day too.
+ * "Take break" in the header (the user, 2026-10-10). Taking one asks what it's
+ * for — meeting, lunch, tea or washroom (2026-10-20). Since 2026-11-04 new leads
+ * still come on a break (as in Draw and Remote); while on one, your leads don't
+ * go inactive or move. Shows how long the break has run; one click ends it. A
+ * break ends with the GST day too.
  */
 export function BreakButton() {
   const { data } = useMyBreak();
@@ -37,7 +37,7 @@ export function BreakButton() {
       whileTap={{ scale: 0.97 }}
       onClick={onBreak ? () => mutate({ on: false }) : undefined}
       disabled={isPending || !data}
-      title={onBreak ? "End your break — new leads come to you again" : "Take a break — no new leads until you end it"}
+      title={onBreak ? "End your break — your leads' inactive clock runs again" : "Take a break — your leads won't go inactive or move until you end it"}
       aria-label={onBreak ? `${breakLabel(data?.kind)}, ${length} — end it` : "Take break"}
       className={cn(
         "flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors disabled:opacity-60",
@@ -80,7 +80,7 @@ export function BreakButton() {
             </motion.button>
           ))}
         </div>
-        <p className="px-1.5 pt-2 text-[11px] leading-snug text-muted-foreground">No new leads come to you until you end it.</p>
+        <p className="px-1.5 pt-2 text-[11px] leading-snug text-muted-foreground">New leads still come to you. Your leads won&apos;t go inactive or move until you end it.</p>
       </PopoverContent>
     </Popover>
   );

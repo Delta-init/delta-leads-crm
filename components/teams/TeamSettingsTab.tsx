@@ -776,8 +776,8 @@ const PRESENCE: Record<Presence, { label: string; cls: string }> = {
 
 /**
  * The switch, and who is where right now: in the 10:00–19:00 GST shift new
- * leads go only to members clocked in on the HRMS and not on a break; never to
- * anyone on leave; nobody clocked in — the normal split, as after 19:00.
+ * leads go only to members clocked in on the HRMS — on a break too (2026-11-04);
+ * never to anyone on leave; nobody clocked in — the normal split, as after 19:00.
  */
 function AttendanceSplitCard({ teamId, members, on, onChange }: {
   teamId: string; members: User[]; on: boolean; onChange?: (v: boolean) => void;
@@ -800,8 +800,8 @@ function AttendanceSplitCard({ teamId, members, on, onChange }: {
           <div className="space-y-0.5">
             <Label className="text-sm font-medium">Only members clocked in, 10:00 AM – 7:00 PM GST</Label>
             <p className="text-xs text-muted-foreground">
-              In the main shift new leads go only to members clocked in on the HRMS and not on a break. Nobody
-              clocked in, or after 7 PM — the normal split. Anyone on leave in the HRMS gets no leads all day.
+              In the main shift new leads go only to members clocked in on the HRMS — a break doesn&apos;t stop them.
+              Nobody clocked in, or after 7 PM — the normal split. Anyone on leave in the HRMS gets no leads all day.
             </p>
           </div>
           <Switch checked={on} onCheckedChange={onChange} disabled={!onChange} />
