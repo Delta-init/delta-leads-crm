@@ -49,6 +49,8 @@ export function TransferLeadsPanel({ userId, userName, reason = "transfer", onDo
     : picked.map((id) => ({ userId: id, count: ownCounts ? (counts[id] === undefined || counts[id] === "" ? 0 : Number(counts[id])) : null }));
   const deferred = useDeferredValue(targets);
   const open = summary.data?.open ?? 0;
+  // Everything else they hold — closed, lost (and in the Banglore CRM, booked) — stays with them.
+  const kept = Object.values(summary.data?.byStatus ?? {}).reduce((x, n) => x + n, 0) - open;
   const preview = useTransferPreview(userId, deferred, open > 0 && !done);
   const typedTotal = ownCounts ? picked.reduce((a, id) => a + (Number(counts[id]) || 0), 0) : open;
 
@@ -95,7 +97,7 @@ export function TransferLeadsPanel({ userId, userName, reason = "transfer", onDo
     <div className="space-y-4 text-sm">
       <p>
         <strong>{userName}</strong> holds <strong>{open}</strong> open lead{open === 1 ? "" : "s"}.
-        {(summary.data!.closed || summary.data!.lost) ? <span className="text-muted-foreground"> Their {summary.data!.closed} closed and {summary.data!.lost} lost stay with them.</span> : null}
+        {kept > 0 ? <span className="text-muted-foreground"> Their other {kept} (closed, lost…) stay with them.</span> : null}
       </p>
       {open === 0 ? (
         <p className="text-muted-foreground">No open leads to move.</p>
