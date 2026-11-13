@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { fmtAcademy, fmtAED } from "@/lib/currency";
 import { uploadReceipt } from "@/hooks/useStudents";
-import { ENROLMENT_PAYMENT_METHODS, PAYMENT_METHOD_LABELS, type Academy, type PaymentOriginal, type StoredReceipt } from "@/types/student";
+import { ENROLMENT_PAYMENT_METHODS, PAYMENT_METHOD_LABELS, RUPEE_METHODS, type Academy, type PaymentOriginal, type StoredReceipt } from "@/types/student";
 
 /*
  * The payments taken at a close, one row each (the user, 2026-10-05): a client
@@ -26,6 +26,8 @@ import { ENROLMENT_PAYMENT_METHODS, PAYMENT_METHOD_LABELS, type Academy, type Pa
  * AED by default, INR picked — or "INR Transfer" as the method, which picks it —
  * with the rupees and the same rate, 1 AED = ₹ how much; its AED is worked out
  * from them. Finance gets the rupees and the rate (1 INR = so many AED).
+ * Razorpay pays out in rupees (the user, 2026-11-13), so picking it does what
+ * picking INR Transfer does; POS is the card machine, in AED like Card.
  */
 
 export interface PaymentRow {
@@ -123,9 +125,9 @@ export const rowOriginal = (r: PaymentRow, academy: Academy = "dubai"): PaymentO
 export const inrRowFields = (o: PaymentOriginal): Partial<PaymentRow> =>
   ({ paidInInr: true, inrInput: String(o.amount), rateInput: String(Number((1 / o.rate).toPrecision(8))) });
 
-/** "INR Transfer" is rupees: picking it on a Dubai close picks INR for the row. */
+/** "INR Transfer" is rupees, and so is Razorpay (RUPEE_METHODS): picking one on a Dubai close picks INR for the row. */
 const methodPatch = (method: string, academy: Academy): Partial<PaymentRow> =>
-  method === "inr_bank_account" ? (academy === "bangalore" ? { method, paidInAed: false } : { method, paidInInr: true }) : { method };
+  (RUPEE_METHODS as readonly string[]).includes(method) ? (academy === "bangalore" ? { method, paidInAed: false } : { method, paidInInr: true }) : { method };
 
 /** What each payment still needs, the way the close's "Still needed" line says it. */
 export function missingInRows(rows: PaymentRow[], academy: Academy = "dubai"): string[] {

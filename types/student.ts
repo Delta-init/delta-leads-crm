@@ -156,9 +156,13 @@ export type EnrolmentLanguage = (typeof ENROLMENT_LANGUAGES)[number];
 
 export const ENROLMENT_PAYMENT_METHODS = [
   "cash", "bank_transfer", "cheque", "card",
+  // The card machine (the user, 2026-11-13) — beside Card, and taken the same way. Finance's `pos`.
+  "pos",
   "easebuzz_emi", "tabby", "tamara", "billexpro",
   // Rupees into the INR account (the user, 2026-10-13) — finance's "INR Bank Account".
   "inr_bank_account",
+  // Razorpay pays out in rupees (the user, 2026-11-13): taken as INR Transfer is — RUPEE_METHODS. Finance's `razorpay`.
+  "razorpay",
 ] as const;
 export type EnrolmentPaymentMethod = (typeof ENROLMENT_PAYMENT_METHODS)[number];
 
@@ -167,12 +171,20 @@ export const PAYMENT_METHOD_LABELS: Record<EnrolmentPaymentMethod, string> = {
   bank_transfer: "Bank Transfer",
   cheque: "Cheque",
   card: "Card",
+  pos: "POS",
   easebuzz_emi: "Easebuzz EMI",
   tabby: "Tabby",
   tamara: "Tamara",
   billexpro: "BillExPro",
   inr_bank_account: "INR Transfer",
+  razorpay: "Razorpay",
 };
+
+/**
+ * The methods that are rupees (2026-11-13): INR Transfer, and Razorpay, which pays out in rupees. Whatever treats a
+ * payment as rupees by its method reads this one list, so Razorpay is taken exactly as INR Transfer is.
+ */
+export const RUPEE_METHODS: readonly EnrolmentPaymentMethod[] = ["inr_bank_account", "razorpay"];
 
 /** A receipt, once it is in storage. */
 export interface StoredReceipt {
