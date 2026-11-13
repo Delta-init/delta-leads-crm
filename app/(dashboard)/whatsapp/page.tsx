@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Link2, Loader2, Maximize2, MessageCircle, Minimize2, Plus, Search, Smartphone, Unlink, UserPlus } from "lucide-react";
+import { ArrowLeft, History, Link2, Loader2, Maximize2, MessageCircle, Minimize2, Plus, Search, Smartphone, Unlink, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Composer, shortTime, Thread, WA_GREEN } from "@/components/whatsapp/waUi";
 import {
-  errMsg, useWhatsAppChatActions, useWhatsAppChats, useWhatsAppLeadOptions, useWhatsAppLink, useWhatsAppMessages, useWhatsAppSend,
+  errMsg, useWhatsAppChatActions, useWhatsAppChats, useWhatsAppFetchOlder, useWhatsAppLeadOptions, useWhatsAppLink, useWhatsAppMessages, useWhatsAppSend,
   useWhatsAppStatus, type WAChat, type WALeadOption, type WAStatusAnswer,
 } from "@/hooks/useWhatsApp";
 import { RecentFollowups } from "@/components/whatsapp/RecentFollowups";
@@ -171,7 +171,18 @@ function WhatsAppPage() {
   const chats = useMemo(() => chatsData?.chats ?? [], [chatsData]);
   const chat: WAChat | null = chats.find((c) => c.chat === chatId) ?? (draft?.chat === chatId ? draft : null)
     ?? (chatId ? { chat: chatId, phone: /^\d+$/.test(chatId) ? chatId : "", name: /^\d+$/.test(chatId) ? `+${chatId}` : chatId, whatsappName: "", lead: null, last: { body: "", at: "", direction: "out", media: null }, unread: 0, count: 0 } : null);
-  const { data: thread } = useWhatsAppMessages(viewing, chatId);
+  // How far back the open chat shows: 300 at a time; past what the CRM holds, the phone is asked for older ones.
+  const [limit, setLimit] = useState(300);
+  useEffect(() => { setLimit(300); }, [chatId, viewing]);
+  const { data: thread } = useWhatsAppMessages(viewing, chatId, limit);
+  const fetchOlder = useWhatsAppFetchOlder();
+  const loadOlder = () => {
+    if (thread?.hasMore) { setLimit((l) => l + 300); return; }
+    fetchOlder.mutate({ ownerId: viewing, chat: chatId }, {
+      onSuccess: () => toast.success("Asked the phone for older messages — they appear in a few seconds"),
+      onError: (e) => toast.error(errMsg(e, "Couldn't ask the phone for older messages")),
+    });
+  };
   const { read, createLead } = useWhatsAppChatActions();
   const send = useWhatsAppSend();
 
@@ -353,6 +364,16 @@ function WhatsAppPage() {
                       {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                     </Button>
                   </div>
+                  {(thread?.messages?.length ?? 0) > 0 && (thread?.hasMore || thread?.canFetchOlder) && (
+                    <div className="flex justify-center border-b bg-muted/30 py-1.5">
+                      <motion.div whileTap={{ scale: 0.97 }}>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" disabled={fetchOlder.isPending} onClick={loadOlder}>
+                          {fetchOlder.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <History className="mr-1 h-3.5 w-3.5" />}
+                          Load older messages
+                        </Button>
+                      </motion.div>
+                    </div>
+                  )}
                   <Thread messages={thread?.messages ?? []} className="min-h-0 flex-1" empty={canSend ? "Write the first message" : "No messages yet"} />
                   {canSend
                     ? <Composer onSendText={sendText} onSendFile={sendFile} />

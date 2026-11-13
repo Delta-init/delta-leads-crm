@@ -68,12 +68,26 @@ export function useWhatsAppChats(ownerId: string) {
   });
 }
 
-export function useWhatsAppMessages(ownerId: string, chat: string) {
+export function useWhatsAppMessages(ownerId: string, chat: string, limit = 300) {
   return useQuery({
-    queryKey: ["whatsapp", "messages", ownerId, chat],
-    queryFn: async () => data<{ canSend: boolean; messages: WAMessage[] }>(await api.get("/whatsapp/messages", { params: { ownerId, chat } })),
+    queryKey: ["whatsapp", "messages", ownerId, chat, limit],
+    queryFn: async () => data<{ canSend: boolean; messages: WAMessage[]; hasMore?: boolean; canFetchOlder?: boolean }>(
+      await api.get("/whatsapp/messages", { params: { ownerId, chat, limit } }),
+    ),
     enabled: !!ownerId && !!chat,
     refetchInterval: 3000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** Ask the phone for a chat's older messages (2026-11-13); they arrive in a few seconds, and the thread refreshes. */
+export function useWhatsAppFetchOlder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { ownerId: string; chat: string }) => (await api.post("/whatsapp/older", v)).data,
+    onSuccess: () => {
+      for (const ms of [3000, 8000, 15000]) setTimeout(() => qc.invalidateQueries({ queryKey: ["whatsapp"] }), ms);
+    },
   });
 }
 
