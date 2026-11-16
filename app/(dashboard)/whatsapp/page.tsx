@@ -4,9 +4,10 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, History, Link2, Loader2, Maximize2, MessageCircle, Minimize2, Plus, Search, Smartphone, Unlink, UserPlus } from "lucide-react";
+import { ArrowLeft, History, Link2, Loader2, Maximize2, MessageCircle, Minimize2, Plus, Search, Send, Smartphone, Unlink, UserPlus, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,8 +15,8 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Composer, shortTime, Thread, WA_GREEN } from "@/components/whatsapp/waUi";
 import {
-  errMsg, useWhatsAppChatActions, useWhatsAppChats, useWhatsAppFetchOlder, useWhatsAppLeadOptions, useWhatsAppLink, useWhatsAppMessages, useWhatsAppSend,
-  useWhatsAppStatus, type WAChat, type WALeadOption, type WAStatusAnswer,
+  errMsg, useWhatsAppChatActions, useWhatsAppChats, useWhatsAppFetchOlder, useWhatsAppLeadOptions, useWhatsAppLink, useWhatsAppMessages, useWhatsAppNewChat, useWhatsAppSend,
+  useWhatsAppSharing, useWhatsAppStatus, type WAChat, type WALeadOption, type WAOwner, type WAStatusAnswer,
 } from "@/hooks/useWhatsApp";
 import { RecentFollowups } from "@/components/whatsapp/RecentFollowups";
 
@@ -23,7 +24,9 @@ import { RecentFollowups } from "@/components/whatsapp/RecentFollowups";
    WhatsApp (2026-10-27, as in CS Portal): each person links their own
    WhatsApp here (a QR, as WhatsApp Web) and chats with their leads; a team
    leader, the Sales Manager or a Super Admin picks one of their people and
-   reads theirs. api-delta-crm routes/whatsappRoutes.ts.
+   reads theirs. A Super Admin can share one person's WhatsApp with others
+   (2026-11-16, as in the Remote CRM): each sees only their own leads' chats
+   on it, and starts new ones with New chat. api-delta-crm routes/whatsappRoutes.ts.
 ──────────────────────────────────────────────────────────────────────────── */
 
 const fmtPhone = (p: string) => (p ? `+${p}` : "");
@@ -48,6 +51,28 @@ function LinkPanel({ me }: { me: WAStatusAnswer["me"] }) {
   const busy = connect.isPending || disconnect.isPending;
   const s = STATUS[me.status] ?? STATUS.disconnected!;
   const run = (m: typeof connect) => m.mutate(undefined, { onError: (e) => toast.error(errMsg(e, "WhatsApp did not answer")) });
+  const from = me.sharedFrom;
+  const others = (me.alsoUsedBy ?? []).filter((u) => u.id !== me.id);
+  // Someone else's WhatsApp, shared with you (2026-11-16): you send from it as yours; only they link or unlink it.
+  if (from) {
+    return (
+      <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-card p-4">
+        <div className="rounded-full p-2" style={{ backgroundColor: `${WA_GREEN}22` }}><Users className="h-5 w-5" style={{ color: WA_GREEN }} /></div>
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold">{from.name}&apos;s WhatsApp</p>
+            <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", s.cls)}>{s.label}</span>
+            {me.status === "connected" && <span className="text-sm text-muted-foreground">{fmtPhone(me.phone)}</span>}
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Shared with you — you see and message your own leads&apos; chats on it; each message you send shows your name.
+            {` ${[from.name, ...others.map((u) => u.name)].join(", ")} see${others.length ? "" : "s"} only their own.`}
+            {me.status !== "connected" ? ` It isn't linked right now — ${from.name} links it again.` : ""}
+          </p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-border/50 bg-card p-4 sm:flex-row sm:items-center">
       <div className="flex flex-1 items-start gap-3">
@@ -60,7 +85,7 @@ function LinkPanel({ me }: { me: WAStatusAnswer["me"] }) {
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {me.status === "connected"
-              ? "Messages to and from your leads show here and on their pages. Your phone stays your WhatsApp — this is one of its linked devices."
+              ? `Messages to and from your leads show here and on their pages. Your phone stays your WhatsApp — this is one of its linked devices.${others.length ? ` Also used by ${others.map((u) => u.name).join(", ")} — each of you sees only your own leads' chats here (your phone still shows them all).` : ""}`
               : me.status === "qr_ready"
                 ? "On your phone: WhatsApp → Settings → Linked devices → Link a device, then scan this code."
                 : "Link your own WhatsApp to chat with your leads from the CRM — normal one-to-one messages."}
@@ -77,6 +102,49 @@ function LinkPanel({ me }: { me: WAStatusAnswer["me"] }) {
             ? <Button disabled={busy} className="text-white" style={{ backgroundColor: WA_GREEN }} onClick={() => run(connect)}>{busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Smartphone className="mr-1 h-4 w-4" />}Link WhatsApp</Button>
             : <Button variant="ghost" disabled={busy} onClick={() => run(disconnect)}>Cancel</Button>}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Who else uses this person's WhatsApp (2026-11-16: two people on one WhatsApp) — a Super Admin adds or takes people off. They
+ * send from it as their own; each of them sees, and is told of, only their own leads' chats on it.
+ */
+function SharePanel({ owner, owners }: { owner: WAOwner; owners: WAOwner[] }) {
+  const share = useWhatsAppSharing();
+  const users = owners.filter((o) => o.usesWhatsAppOf === owner.id);
+  // Someone using another's WhatsApp, or whose own is shared, can't be added here.
+  const shared = new Set(owners.map((o) => o.usesWhatsAppOf).filter(Boolean));
+  const candidates = owners.filter((o) => o.id !== owner.id && !o.usesWhatsAppOf && !shared.has(o.id));
+  const save = (ids: string[], done: string) => share.mutate({ ownerId: owner.id, userIds: ids }, {
+    onSuccess: () => toast.success(done),
+    onError: (e) => toast.error(errMsg(e, "Not saved")),
+  });
+  if (owner.usesWhatsAppOf) {
+    const of = owners.find((o) => o.id === owner.usesWhatsAppOf);
+    return <p className="text-sm text-muted-foreground">{owner.name} uses {of?.name ?? "someone else"}&apos;s WhatsApp.</p>;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-muted-foreground">Also used by</span>
+      {users.length === 0 && <span className="text-sm">nobody</span>}
+      {users.map((u) => (
+        <Badge key={u.id} variant="secondary" className="gap-1">
+          {u.name}
+          <button type="button" aria-label={`Take ${u.name} off`} disabled={share.isPending}
+            onClick={() => confirm(`Take ${u.name} off ${owner.name}'s WhatsApp? They go back to their own.`) && save(users.filter((x) => x.id !== u.id).map((x) => x.id), `${u.name} taken off`)}>
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      ))}
+      {candidates.length > 0 && (
+        <Select value="" onValueChange={(id) => { const u = owners.find((o) => o.id === id); if (u) save([...users.map((x) => x.id), id], `${u.name} now uses ${owner.name}'s WhatsApp`); }}>
+          <SelectTrigger className="h-8 w-48" disabled={share.isPending}><SelectValue placeholder="+ Add someone" /></SelectTrigger>
+          <SelectContent>
+            {candidates.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}{o.team ? ` · ${o.team}` : ""}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }
@@ -133,6 +201,85 @@ function LinkLeadDialog({ open, onOpenChange, ownerId, chat }: { open: boolean; 
   );
 }
 
+/**
+ * New chat (2026-11-16): one of your leads or a number typed in, and the first message — sent from your WhatsApp, and
+ * the chat is yours (on a shared WhatsApp the others don't see it). Another person's lead is refused, saying whose.
+ */
+function NewChatDialog({ open, onOpenChange, from, mates, onStarted }: {
+  open: boolean; onOpenChange: (o: boolean) => void; from: string; mates: string[]; onStarted: (chat: string) => void;
+}) {
+  const start = useWhatsAppNewChat();
+  const [mode, setMode] = useState<"lead" | "number">("lead");
+  const [lead, setLead] = useState<WALeadOption | null>(null);
+  const [leadNumber, setLeadNumber] = useState("");
+  const [number, setNumber] = useState("");
+  const [text, setText] = useState("");
+  useEffect(() => { if (!open) { setMode("lead"); setLead(null); setLeadNumber(""); setNumber(""); setText(""); } }, [open]);
+  const nums = lead ? numbersOf(lead.phone) : [];
+  const typed = toIntl(number);
+  const ready = !!text.trim() && (mode === "lead" ? !!lead && nums.length > 0 : /^\d{9,15}$/.test(typed));
+  const go = () => start.mutate(
+    mode === "lead" ? { leadId: lead!.id, number: leadNumber || nums[0], text: text.trim() } : { number: typed, text: text.trim() },
+    {
+      onSuccess: (r) => { toast.success(r.existed ? "Sent" : `Chat started${r.lead?.name ? ` with ${r.lead.name}` : ""}`); onStarted(r.chat); onOpenChange(false); },
+      onError: (e) => toast.error(errMsg(e, "Not sent")),
+    },
+  );
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!start.isPending) onOpenChange(o); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>New chat</DialogTitle>
+          <DialogDescription>
+            From {from}.{mates.length ? ` Also used by ${mates.join(", ")} — this chat will be yours; they won't see it here.` : ""}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
+          {(["lead", "number"] as const).map((m) => (
+            <button key={m} type="button" onClick={() => setMode(m)}
+              className={cn("rounded-md px-3 py-1.5", mode === m ? "bg-background font-medium shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+              {m === "lead" ? "One of my leads" : "A number"}
+            </button>
+          ))}
+        </div>
+        {mode === "lead" ? (
+          lead ? (
+            <div className="rounded-md border p-2.5 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-medium">{lead.name || "No name"}</span>
+                <button type="button" className="shrink-0 text-xs text-primary hover:underline" onClick={() => setLead(null)}>Change</button>
+              </div>
+              {nums.length === 0 ? <p className="mt-1 text-xs text-destructive">No phone number on their record</p>
+                : nums.length === 1 ? <p className="mt-0.5 text-xs text-muted-foreground">{fmtPhone(nums[0]!)}</p>
+                  : (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {nums.map((n) => (
+                        <Button key={n} type="button" size="sm" variant={(leadNumber || nums[0]) === n ? "default" : "outline"} className="h-7 text-xs" onClick={() => setLeadNumber(n)}>+{n}</Button>
+                      ))}
+                    </div>
+                  )}
+            </div>
+          ) : <LeadSearch placeholder="Name or number of your lead…" onPick={(l) => { setLead(l); setLeadNumber(""); }} />
+        ) : (
+          <div className="space-y-1">
+            <Input autoFocus value={number} onChange={(e) => setNumber(e.target.value)} placeholder="+971 50 123 4567" inputMode="tel" />
+            <p className="text-xs text-muted-foreground">
+              With its country code. Someone else&apos;s lead is refused; a number that is nobody&apos;s lead is your chat.
+            </p>
+          </div>
+        )}
+        <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="First message…" rows={3} maxLength={4000} />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={start.isPending}>Cancel</Button>
+          <Button disabled={!ready || start.isPending} className="text-white" style={{ backgroundColor: WA_GREEN }} onClick={go}>
+            {start.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />}Send
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function WhatsAppPage() {
   const params = useSearchParams();
   const { data: st, isLoading } = useWhatsAppStatus();
@@ -144,7 +291,7 @@ function WhatsAppPage() {
     if (c) { setOwnerId(""); setChatId(c); }
   }, [params]);
   const [q, setQ] = useState("");
-  const [newNumber, setNewNumber] = useState<string | null>(null);
+  const [newChat, setNewChat] = useState(false);
   const [draft, setDraft] = useState<WAChat | null>(null);          // a chat started from a lead, before its first message
   const [picking, setPicking] = useState<{ lead: WALeadOption; numbers: string[] } | null>(null);
   const [linking, setLinking] = useState(false);
@@ -165,8 +312,12 @@ function WhatsAppPage() {
   useEffect(() => () => { if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); }, []);
 
   const owners = st?.owners ?? [];
-  const viewing = ownerId || (st?.canLink ? st?.me?.id : owners[0]?.id) || "";
-  const mine = !!st && viewing === st.me?.id;
+  // Your WhatsApp: your own, or the one shared with you (2026-11-16).
+  const myPhone = st?.me?.phoneOwnerId || st?.me?.id || "";
+  const viewing = ownerId || (st?.canLink ? myPhone : owners[0]?.id) || "";
+  const mine = !!st && viewing === myPhone;
+  // The others on your WhatsApp: each sees only their own leads' chats.
+  const mates = st ? [...(st.me.sharedFrom ? [st.me.sharedFrom.name] : []), ...(st.me.alsoUsedBy ?? []).filter((u) => u.id !== st.me.id).map((u) => u.name)] : [];
   const { data: chatsData } = useWhatsAppChats(viewing);
   const chats = useMemo(() => chatsData?.chats ?? [], [chatsData]);
   const chat: WAChat | null = chats.find((c) => c.chat === chatId) ?? (draft?.chat === chatId ? draft : null)
@@ -267,6 +418,7 @@ function WhatsAppPage() {
               ))}
             </SelectContent>
           </Select>
+          {st.canShare && owners.find((o) => o.id === viewing) && <SharePanel owner={owners.find((o) => o.id === viewing)!} owners={owners} />}
         </div>
       )}
 
@@ -281,10 +433,21 @@ function WhatsAppPage() {
                     <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or number" className="h-9 pl-8" />
                   </div>
+                  {/* New chat (2026-11-16): one of your leads or a number, and the first message */}
+                  {mine && canSend && (
+                    <Button size="sm" className="h-9 shrink-0 gap-1 px-2.5 text-white" style={{ backgroundColor: WA_GREEN }} onClick={() => setNewChat(true)}>
+                      <Plus className="h-4 w-4" />New chat
+                    </Button>
+                  )}
                   <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={toggleFull} title={full ? "Exit full screen" : "Full screen"} aria-label={full ? "Exit full screen" : "Full screen"}>
                     {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                   </Button>
                 </div>
+                {mine && mates.length > 0 && (
+                  <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <Users className="h-3 w-3 shrink-0" />Your leads&apos; chats only — {mates.join(", ")} also use{mates.length === 1 ? "s" : ""} this WhatsApp
+                  </p>
+                )}
                 {mine && st.canLink && (
                   <>
                     <LeadSearch placeholder="Message a lead…" onPick={openLead} />
@@ -296,14 +459,6 @@ function WhatsAppPage() {
                         </div>
                       </div>
                     )}
-                    {canSend && (newNumber === null
-                      ? <button type="button" className="text-xs text-primary hover:underline" onClick={() => setNewNumber("")}><Plus className="mr-0.5 inline h-3 w-3" />or type a number</button>
-                      : (
-                        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const d = toIntl(newNumber); if (d.length >= 9) { setChatId(d); setNewNumber(null); } }}>
-                          <Input autoFocus value={newNumber} onChange={(e) => setNewNumber(e.target.value)} placeholder="Number with country code" className="h-8" />
-                          <Button type="submit" size="sm" className="h-8">Open</Button>
-                        </form>
-                      ))}
                   </>
                 )}
               </div>
@@ -347,6 +502,13 @@ function WhatsAppPage() {
                       <p className="truncate text-xs text-muted-foreground">
                         {fmtPhone(chat.phone)}{chat.whatsappName && chat.whatsappName !== chat.name ? ` · on WhatsApp: ${chat.whatsappName}` : ""}
                       </p>
+                      {/* Whose lead it is — on a shared WhatsApp, which of you holds them */}
+                      {chat.lead && mates.length > 0 && (
+                        <p className="truncate text-xs">
+                          <span className="text-muted-foreground">Assigned to </span>
+                          <span className="font-medium">{chat.lead.owner || "nobody"}</span>
+                        </p>
+                      )}
                     </div>
                     {chat.lead && (
                       <Link href={`/leads/${chat.lead.id}`} className="hidden sm:block"><Badge variant="outline" className="hover:bg-muted">Open lead</Badge></Link>
@@ -393,6 +555,9 @@ function WhatsAppPage() {
       {!full && <RecentFollowups />}
 
       <LinkLeadDialog open={linking} onOpenChange={setLinking} ownerId={viewing} chat={chat} />
+      <NewChatDialog open={newChat} onOpenChange={setNewChat} mates={mates}
+        from={st.me.sharedFrom ? `${st.me.sharedFrom.name}'s WhatsApp${st.me.phone ? ` (${fmtPhone(st.me.phone)})` : ""}` : `your WhatsApp${st.me.phone ? ` (${fmtPhone(st.me.phone)})` : ""}`}
+        onStarted={(c) => { setOwnerId(""); setDraft(null); setChatId(c); }} />
     </div>
   );
 }

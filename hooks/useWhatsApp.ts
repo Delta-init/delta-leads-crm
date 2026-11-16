@@ -21,8 +21,22 @@ export interface WAChat {
   chat: string; phone: string; name: string; whatsappName: string; lead: WALead | null;
   last: { body: string; at: string; direction: "in" | "out"; media: string | null }; unread: number; count: number;
 }
-export interface WAOwner { id: string; name: string; team: string; status: WAStatus; phone: string; messages: number }
-export interface WAStatusAnswer { enabled: boolean; canLink: boolean; me: { id: string; name: string; status: WAStatus; phone: string; qr: string }; owners: WAOwner[] }
+/** `usesWhatsAppOf`: whose WhatsApp they use instead of their own (shared by a Super Admin, 2026-11-16). */
+export interface WAOwner { id: string; name: string; team: string; status: WAStatus; phone: string; messages: number; usesWhatsAppOf?: string | null }
+export interface WAStatusAnswer {
+  enabled: boolean; canLink: boolean;
+  /**
+   * Your WhatsApp: your own, or the one shared with you (`sharedFrom`, whose; `phoneOwnerId` is whose chats are yours).
+   * `alsoUsedBy`: the others using it — each sees only their own leads' chats on it.
+   */
+  me: {
+    id: string; name: string; status: WAStatus; phone: string; qr: string;
+    phoneOwnerId?: string; sharedFrom?: { id: string; name: string } | null; alsoUsedBy?: { id: string; name: string }[];
+  };
+  /** A Super Admin: may share someone's WhatsApp with others. */
+  canShare?: boolean;
+  owners: WAOwner[];
+}
 /** Where a lead's automatic follow-ups stand (api services/whatsapp/followups.ts). */
 export interface WAFollowup {
   on: boolean;
@@ -131,6 +145,29 @@ export function useWhatsAppLink() {
     connect: useMutation({ mutationFn: async () => data(await api.post("/whatsapp/connect")), onSuccess: refresh }),
     disconnect: useMutation({ mutationFn: async () => data(await api.post("/whatsapp/disconnect")), onSuccess: refresh }),
   };
+}
+
+/** A Super Admin sets who else uses someone's WhatsApp (exactly these people; [] = nobody). */
+export function useWhatsAppSharing() {
+  const refresh = useRefresh();
+  return useMutation({
+    mutationFn: async (v: { ownerId: string; userIds: string[] }) =>
+      data<{ ownerId: string; users: { id: string; name: string }[] }>(await api.put("/whatsapp/sharing", v)),
+    onSuccess: refresh,
+  });
+}
+
+/**
+ * New chat (2026-11-16): one of your leads (`leadId`, and which of its numbers) or a number typed in, and the first
+ * message — from your WhatsApp. Another person's lead is refused with whose it is (the answer's message).
+ */
+export function useWhatsAppNewChat() {
+  const refresh = useRefresh();
+  return useMutation({
+    mutationFn: async (v: { leadId?: string; number?: string; text: string }) =>
+      data<{ chat: string; lead: { id: string; name: string } | null; existed: boolean }>(await api.post("/whatsapp/new-chat", v, { timeout: 60_000 })),
+    onSuccess: () => { void refresh(); },
+  });
 }
 
 export function useWhatsAppSend() {
