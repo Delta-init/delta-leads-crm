@@ -45,8 +45,34 @@ export interface Student {
   bonusAmount?: number;
   /** Which academy it was closed for — its fee and payments are INR when Bangalore. Absent (Dubai) on older enrolments. */
   academy?: Academy;
+  /** The invoice it became in finance, once delivered. */
+  financeInvoiceNumber?: string | null;
+  /** Course changes asked of finance after it approved the enrolment (2026-11-23), oldest first. */
+  courseChanges?: CourseChange[];
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * A course change asked of finance once it approved the enrolment (2026-11-23): the new course and fee, why, and what
+ * finance made of it. Approved, the enrolment and the lead move to it; rejected, `rejectReason` says why.
+ */
+export interface CourseChange {
+  externalId: string;
+  /** Null for one taken from finance whose course isn't a course here (its record here was lost). */
+  courseId: string | null;
+  courseName: string;
+  /** In the enrolment's currency (INR for Bangalore). */
+  fee: number;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  requestedBy?: { id?: string | null; name?: string };
+  requestedAt: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  note?: string;
+  rejectReason?: string;
+  appliedAt?: string;
 }
 
 /**
