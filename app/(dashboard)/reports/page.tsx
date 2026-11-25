@@ -14,7 +14,7 @@ import {
   GitFork, DollarSign, Trophy, ChevronDown, ChevronUp,
   Loader2, Tag, X, AlertTriangle, Timer, CalendarCheck, Filter, ArrowUpRight,
   Sparkles, TrendingDown, Star, Bell, Shield, GitMerge, Clock, CheckCircle2,
-  XCircle, PhoneCall, UserCheck, AlertOctagon,
+  XCircle, PhoneCall, UserCheck, AlertOctagon, BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,7 @@ import {
   useRevenueOverview,
   useRevenueTimeline,
   useRevenueTeams,
+  useOldBooks,
   useSourceAnalytics,
   useCampaignBreakdown,
   usePipelineBreakdown,
@@ -1529,6 +1530,50 @@ function MemberSplitPanels({
 // TAB 3: Revenue
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Finance's old books (sales from before the CRM, still paid off in instalments) counted for their salesperson in the
+ * range — already inside Total Received and every figure above; this lists them. Hidden when there are none, and on a
+ * programme tab (old books have no programme).
+ */
+function OldBooksCard({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+  useCurrencyStore();
+  const q = useOldBooks(dateFrom, dateTo);
+  const d = q.data;
+  if (!d || d.count === 0) return null;
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+      <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+            <div>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary" /> Old books collected
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                {d.count} instalment{d.count === 1 ? "" : "s"} · counted in revenue
+              </p>
+            </div>
+            <span className="text-xl font-bold tabular-nums">{fmtFull(d.total)}</span>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="divide-y divide-border/50">
+            {d.rows.map((r, i) => (
+              <div key={`${r.invoiceNumber}-${r.paidAt}-${i}`} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0 truncate">
+                  <span className="font-medium">{r.name}</span>
+                  <span className="text-muted-foreground"> · {r.invoiceNumber} · {r.course}</span>
+                </span>
+                <span className="font-semibold tabular-nums shrink-0">{fmtFull(r.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 function RevenueTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   useCurrencyStore(); // subscribe so component re-renders on currency change
   const [revPeriod,    setRevPeriod]    = useState<RevenuePeriod>("monthly");
@@ -1615,6 +1660,9 @@ function RevenueTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) 
           loading={overview.isLoading}
         />
       </div>
+
+      {/* ── Old books collected (2026-11-25) — inside the figures above ─────────── */}
+      <OldBooksCard dateFrom={dateFrom} dateTo={dateTo} />
 
       {/* ── Revenue Timeline Chart ─────────────────────────────────────────── */}
       <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.24 }}>

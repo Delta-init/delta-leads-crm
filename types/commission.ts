@@ -191,6 +191,8 @@ export interface CommissionSale {
   paidInFullAt?: string | null;
   /** The share of what the client paid that came in rupees, 0–1 (2026-11-13). */
   rupeeShare?: number;
+  /** A sale from finance's old books (2026-11-25): no enrolment here — the invoice is finance's. */
+  oldBooks?: boolean;
   /** Only the lines the viewer may see. */
   lines: CommissionLine[];
 }

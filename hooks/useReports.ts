@@ -172,6 +172,41 @@ export function useRevenueOverview(dateFrom: string, dateTo: string) {
   });
 }
 
+// ── Old books (2026-11-25) ────────────────────────────────────────────────────
+
+/** One payment from finance's old books, counted for its salesperson here. */
+export interface OldBooksRow {
+  invoiceNumber: string;
+  customerName: string;
+  course: string;
+  userId: string;
+  name: string;
+  amount: number;
+  paidAt: string;
+  paidInFull: boolean;
+}
+export interface OldBooksReport { total: number; count: number; rows: OldBooksRow[] }
+
+/**
+ * Finance's old books counted here in the range — already inside every revenue figure; this lists them. Only on the
+ * All tab: old books have no programme.
+ */
+export function useOldBooks(dateFrom: string, dateTo: string) {
+  const program = useReportProgram();
+  return useQuery<OldBooksReport>({
+    queryKey: ["reports", "old-books", dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<OldBooksReport>>(`/reports/old-books?${params}`);
+      return data.data;
+    },
+    enabled: !program,
+    staleTime: 60_000,
+  });
+}
+
 // ── Revenue Timeline ──────────────────────────────────────────────────────────
 
 export function useRevenueTimeline(
